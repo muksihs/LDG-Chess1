@@ -1,0 +1,102 @@
+plugins {
+  id "us.kirchmeier.capsule" version "1.0.2"
+}
+apply plugin: 'java'
+apply plugin: 'eclipse'
+apply plugin: 'eclipse-wtp'
+
+group "com.muksihs"
+
+version = '20180920-01'
+
+sourceCompatibility = 1.8
+compileJava.options.encoding = 'UTF-8'
+
+task fatjar(type: FatCapsule) {
+  	archiveName 'LDG-Chess1.jar'
+	applicationClass 'com.muksihs.ldg.chess1.Main'
+	capsuleManifest {
+    	jvmArgs = ['-Dfile.encoding=UTF-8']
+	}
+}
+
+repositories {
+    jcenter()
+    maven { url "https://jitpack.io" }
+}
+
+configurations {
+  provided
+}
+
+dependencies {
+	//compile 'eu.bittrade.libs:steemj-core:0.4.3'
+	//compile 'com.github.muksihs:steem-java-api-wrapper:5c3a24a'
+	//compile project(':steemj-core')
+	compile 'com.github.muksihs.steem-java-api-wrapper:steemj-core:0.4.6-20180907-00'
+	compile 'eu.bittrade.libs:steemj-image-upload:1.0.0'
+	compile 'org.apache.commons:commons-text:+'
+	//compile 'com.github.tommyettinger:blazingchain:1.4.+'
+	
+	// https://mvnrepository.com/artifact/org.slf4j/slf4j-jdk14
+	compile group: 'org.slf4j', name: 'slf4j-jdk14', version: '1.7.25'
+	// https://mvnrepository.com/artifact/org.apache.commons/commons-math3
+	//compile group: 'org.apache.commons', name: 'commons-math3', version: '3.6.1'
+	compile 'com.github.CherokeeLanguage:SimpleTextUi:20180903'
+	
+	compile 'com.github.muksihs:chesslib:e3294c8c71'
+	
+	testCompile 'org.testng:testng:6.+'
+}
+ 
+configurations.all {
+    resolutionStrategy.cacheChangingModulesFor 30, 'seconds'
+}
+
+
+task "create-dirs" << {
+	sourceSets*.java.srcDirs*.each { it.mkdirs(); new File(it, ".gitignore").createNewFile(); }
+	sourceSets*.resources.srcDirs*.each { it.mkdirs(); new File(it, ".gitignore").createNewFile(); }
+}
+
+eclipseJdt << {
+    File f = file('.settings/org.eclipse.core.resources.prefs')
+    f.write('eclipse.preferences.version=1\n')
+    f.append('encoding/<project>=utf-8')
+    f = file('.settings/org.eclipse.core.runtime.prefs')
+    f.write('eclipse.preferences.version=1\n')
+    f.append('line.separator=\\n\n')
+}
+
+eclipse {
+	project {
+		name = 'LDG-Chess1'
+		natures 'org.eclipse.buildship.core.gradleprojectnature'
+	}
+
+	classpath {
+		plusConfigurations += [configurations.provided]
+		downloadSources = true
+		downloadJavadoc = true
+	}
+
+	jdt {
+		sourceCompatibility=1.8
+		targetCompatibility=1.8
+	}
+
+	wtp {
+		facet {
+			facets = []
+			facet name: 'jst.java', version: '1.8'
+		}
+	}
+}
+
+test {
+  useTestNG()
+  systemProperty 'debug', 'debug'
+  testLogging.showStandardStreams = true
+}
+
+
