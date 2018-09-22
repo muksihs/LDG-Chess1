@@ -1,8 +1,5 @@
 package com.muksihs.ldg.chess1;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import org.apache.commons.lang3.StringUtils;
 
 public class DogChessUtils {

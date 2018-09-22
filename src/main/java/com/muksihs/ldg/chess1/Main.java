@@ -41,7 +41,7 @@ import com.github.bhlangonijr.chesslib.move.Move;
 import com.github.bhlangonijr.chesslib.move.MoveGenerator;
 import com.github.bhlangonijr.chesslib.move.MoveGeneratorException;
 import com.muksihs.ldg.chess1.models.NewGameInviteInfo;
-import com.muksihs.ldg.chess1.models.PlayerPairs;
+import com.muksihs.ldg.chess1.models.PlayerChallenge;
 import com.muksihs.ldg.chess1.models.SteemAccountInformation;
 
 import eu.bittrade.libs.steemj.SteemJ;
@@ -57,6 +57,7 @@ import eu.bittrade.libs.steemj.base.models.VoteState;
 import eu.bittrade.libs.steemj.configuration.SteemJConfig;
 import eu.bittrade.libs.steemj.enums.PrivateKeyType;
 import eu.bittrade.libs.steemj.exceptions.SteemCommunicationException;
+import eu.bittrade.libs.steemj.exceptions.SteemInvalidTransactionException;
 import eu.bittrade.libs.steemj.exceptions.SteemResponseException;
 import eu.bittrade.libs.steemj.util.SteemJUtils;
 import steem.models.ChessCommentMetadata;
@@ -141,16 +142,8 @@ public class Main extends AbstractApp {
 
 		doUpvoteChecks();
 		doAnnounceGamePost();
-		
-		Set<PlayerPairs> newPlayers = newPlayersWantingToPlay();
-		if (!newPlayers.isEmpty()) {
-			for (PlayerPairs newPlayerPair: newPlayers) {
-				System.out.println(newPlayerPair.getPermlink().getLink());
-				System.out.println(newPlayerPair.getChallenger().getName()+" challenges "+(newPlayerPair.getChallenged()==null?"ANYONE":newPlayerPair.getChallenged().getName()));
-			}
-		}
-		
 		doRunGameTurns();
+		doNewPlayerSignups();
 
 		if (true)
 			return;
@@ -182,6 +175,132 @@ public class Main extends AbstractApp {
 			System.out.println("SIDE TO MOVE: " + board.getSideToMove());
 			System.out.println("HISTORY: " + history);
 		}
+	}
+
+	private void doNewPlayerSignups() throws JsonParseException, JsonMappingException, SteemCommunicationException,
+			SteemResponseException, IOException, SteemInvalidTransactionException {
+		Set<PlayerChallenge> newPlayers = newPlayersWantingToPlay();
+		Set<String> semaphores = getListOfActiveGames();
+		Set<SignupReject> rejects = new HashSet<>();
+		Iterator<PlayerChallenge> iPlayers = newPlayers.iterator();
+		while (iPlayers.hasNext()) {
+			PlayerChallenge newPlayerPair = iPlayers.next();
+			AccountName challenger = newPlayerPair.getChallenger();
+			AccountName challenged = newPlayerPair.getChallenged();
+			Permlink permlink = newPlayerPair.getPermlink();
+			String[] tags = newPlayerPair.getTags().toArray(new String[0]);
+			String semaphore = "@" + challenger.getName();
+			if (challenged != null) {
+				semaphore += "-@" + challenged.getName();
+			}
+			if (semaphores.contains(semaphore)) {
+				SignupReject reject = new SignupReject();
+				reject.setChallenger(challenger);
+				reject.setPermlink(permlink);
+				reject.setTags(tags);
+				reject.setReason("<html><h3>Rejected</h3><h4>Match already in progress.</h4></html>");
+				rejects.add(reject);
+				iPlayers.remove();
+				continue;
+			}
+			if (challenger.equals(challenged)) {
+				SignupReject reject = new SignupReject();
+				reject.setChallenger(challenger);
+				reject.setPermlink(permlink);
+				reject.setTags(tags);
+				reject.setReason("<html><h3>Rejected</h3><h4>You are not allowed to play yourself.</h4></html>");
+				rejects.add(reject);
+				iPlayers.remove();
+				continue;
+			}
+			if (challenged != null) {
+				List<ExtendedAccount> valid = steemJ.getAccounts(Arrays.asList(challenged));
+				if (valid == null || valid.isEmpty()) {
+					SignupReject reject = new SignupReject();
+					reject.setChallenger(challenger);
+					reject.setPermlink(permlink);
+					reject.setTags(tags);
+					reject.setReason("<html><h3>Rejected</h3><h4>The account @" + challenged.getName()
+							+ " does not exist.</h4></html>");
+					rejects.add(reject);
+					iPlayers.remove();
+					continue;
+				}
+			}
+		}
+
+		doNewPlayerSignupRejects(rejects);
+		
+		List<PlayerMatch> matches = getConfirmedMathes(newPlayers);
+		for (PlayerMatch match: matches) {
+			System.out.println("=== MATCH: ");
+			System.out.println(" -- Player 1");
+			System.out.println("    @"+match.getPlayer1().getChallenger().getName());
+			System.out.println("    @"+match.getPlayer1().getChallenged().getName());
+			System.out.println(" -- Player 2");
+			System.out.println("    @"+match.getPlayer2().getChallenger().getName());
+			System.out.println("    @"+match.getPlayer2().getChallenged().getName());
+		}
+
+		iPlayers = newPlayers.iterator();
+		while (iPlayers.hasNext()) {
+			PlayerChallenge newPlayerPair = iPlayers.next();
+			System.out.println(newPlayerPair.getChallenger().getName() + " challenges "
+					+ (newPlayerPair.getChallenged() == null ? "ANYONE" : newPlayerPair.getChallenged().getName()));
+		}
+	}
+
+	private List<PlayerMatch> getConfirmedMathes(Set<PlayerChallenge> newPlayers) {
+		List<PlayerMatch> matches = new ArrayList<>();
+		List<PlayerChallenge> player1List = new ArrayList<>(newPlayers);
+		List<PlayerChallenge> player2List = new ArrayList<>(newPlayers);
+		Set<String> already = new HashSet<>();
+		Iterator<PlayerChallenge> iPlayer1 = player1List.iterator();
+		while (iPlayer1.hasNext()) {
+			PlayerChallenge player1 = iPlayer1.next();
+			Iterator<PlayerChallenge> iPlayer2 = player2List.iterator();
+			while (iPlayer2.hasNext()) {
+				PlayerChallenge player2 = iPlayer2.next();
+				if (!player1.isMatchFor(player2)) {
+					continue;
+				}
+				iPlayer1.remove();
+				iPlayer2.remove();
+				PlayerMatch match = new PlayerMatch();
+				match.setPlayer1(player1);
+				match.setPlayer2(player2);
+				if (already.contains(match.getSemaphore())) {
+					continue;
+				}
+				matches.add(match);
+				already.add(match.getSemaphore());
+				already.add(match.getInverseSemaphore());
+			}
+		}
+		return matches;
+	}
+
+	private void doNewPlayerSignupRejects(Set<SignupReject> rejects)
+			throws SteemCommunicationException, SteemResponseException, SteemInvalidTransactionException {
+		for (SignupReject reject : rejects) {
+			retries: for (int retries = 0; retries < 10; retries++) {
+				try {
+					System.out.println(" Reject: " + reject.getChallenger().getName() + " "
+							+ reject.getReason().replaceAll("<[^>]*?>", " "));
+					waitCheckBeforeReplying(steemJ);
+					steemJ.createComment(reject.getChallenger(), //
+							reject.getPermlink(), //
+							reject.getReason(), //
+							reject.getTags());
+					break retries;
+				} catch (Exception e) {
+				}
+			}
+		}
+	}
+
+	private Set<String> getListOfActiveGames() {
+		return new HashSet<>();
 	}
 
 	private void doRunGameTurns() throws JsonParseException, JsonMappingException, IOException,
@@ -482,7 +601,7 @@ public class Main extends AbstractApp {
 		tags[1] = "games";
 		tags[2] = "new-game";
 		tags[3] = "contest";
-		tags[4] = "game-" + info.getGameId();
+		tags[4] = "signup-" + info.getGameId();
 		while (true) {
 			waitIfLowBandwidth();
 			try {
@@ -540,11 +659,11 @@ public class Main extends AbstractApp {
 		return mostRecent.before(oldestThreshold);
 	}
 
-	private Set<PlayerPairs> newPlayersWantingToPlay() throws SteemCommunicationException, SteemResponseException,
+	private Set<PlayerChallenge> newPlayersWantingToPlay() throws SteemCommunicationException, SteemResponseException,
 			JsonParseException, JsonMappingException, IOException {
 		List<CommentBlogEntry> entries = steemJ.getBlog(botAccount, 0, (short) 100);
 		Date oldestThreshold = DateUtils.addDays(new Date(), -15);
-		Set<PlayerPairs> pairings = new HashSet<>();
+		Set<PlayerChallenge> pairings = new HashSet<>();
 		gameScan: for (CommentBlogEntry entry : entries) {
 			// if not by game master, SKIP
 			if (entry.getComment() == null) {
@@ -573,48 +692,49 @@ public class Main extends AbstractApp {
 				continue gameScan;
 			}
 			List<Discussion> replies = steemJ.getContentReplies(botAccount, permlink);
-			if (replies==null || replies.isEmpty()) {
+			if (replies == null || replies.isEmpty()) {
 				continue gameScan;
 			}
-			replies: for (Discussion reply: replies) {
+			replies: for (Discussion reply : replies) {
 				AccountName challenger = reply.getAuthor();
 				String replyBody = reply.getBody();
-				List<String> repliesToPlayer = reply.getReplies();
-				if (reply.getChildren()>0) {
-					List<Discussion> maybeBotReplies = steemJ.getContentReplies(botAccount, reply.getPermlink());
-					if (maybeBotReplies!=null&&!maybeBotReplies.isEmpty()) {
-						maybeBotReplies: for (Discussion maybeBotReply: maybeBotReplies) {
-							if (!botAccount.equals(maybeBotReply.getAuthor())) {
-								continue maybeBotReplies;
-							}
-							String maybeBotReplyBody = maybeBotReply.getBody();
-							if (maybeBotReplyBody.toUpperCase().contains("CHALLENGE ACCEPTED")) {
-								continue replies;
-							}
-						}
-					}
+				List<Discussion> botReplies = steemJ.getContentReplies(reply.getAuthor(), reply.getPermlink());
+				if (botReplies == null) {
+					continue;
 				}
-				replyBody=replyBody.toLowerCase();
-				replyBody=replyBody.replaceAll("</?[^>]*?>", " ");
+				replyBody = replyBody.toLowerCase();
+				replyBody = replyBody.replaceAll("</?[^>]*?>", " ");
 				replyBody = StringUtils.normalizeSpace(replyBody).trim();
 				if (!replyBody.startsWith("play")) {
 					continue replies;
 				}
-				PlayerPairs pair = new PlayerPairs();
+				maybeBotReplies: for (Discussion maybeBotReply : botReplies) {
+					if (!botAccount.equals(maybeBotReply.getAuthor())) {
+						continue maybeBotReplies;
+					}
+					String botReply = maybeBotReply.getBody().toLowerCase();
+					botReply = botReply.replaceAll("</?[^>]*?>", " ");
+					botReply = StringUtils.normalizeSpace(botReply).trim();
+					if (botReply.startsWith("game started")) {
+						continue replies;
+					}
+					if (botReply.startsWith("rejected")) {
+						continue replies;
+					}
+				}
+				PlayerChallenge pair = new PlayerChallenge();
 				pair.setChallenger(challenger);
 				pair.setPermlink(reply.getPermlink());
+				pair.setTags(Arrays.asList(metadata.getTags()));
 				extractChallenged: if (replyBody.contains("@")) {
 					replyBody = StringUtils.substringAfter(replyBody, "play").trim();
 					if (!replyBody.startsWith("@")) {
 						break extractChallenged;
 					}
 					replyBody = StringUtils.substringBefore(replyBody, " ").trim();
-					replyBody = replyBody.substring(1); //skip the '@'
-					AccountName challenged=new AccountName(replyBody);
-					List<ExtendedAccount> valid = steemJ.getAccounts(Arrays.asList(challenged));
-					if (valid!=null || !valid.isEmpty()) {
-						pair.setChallenged(challenged);
-					}
+					replyBody = replyBody.substring(1); // skip the '@'
+					AccountName challenged = new AccountName(replyBody);
+					pair.setChallenged(challenged);
 				}
 				pairings.add(pair);
 			}
@@ -685,7 +805,7 @@ public class Main extends AbstractApp {
 	private static final String _PERMLINK = "_permlink_";
 
 	private String generateGameInviteTitle(String gameId) {
-		String title = "Leather Dog Chess - New Player Signup! " + " - Game " + gameId;
+		String title = "Leather Dog Chess - New Player Signup! " + " - [" + gameId + "]";
 		return title;
 	}
 
@@ -757,6 +877,29 @@ public class Main extends AbstractApp {
 				return;
 			}
 			log.info("Last post was within 5 minutes. Sleeping " + NF.format(sleepFor / 60000f) + " minutes.");
+			sleep(sleepFor);
+		}
+	}
+
+	private void waitCheckBeforeReplying(SteemJ steemJ) throws SteemCommunicationException, SteemResponseException {
+		final long MIN_DELAY = 1000l * 3l;
+		final long EXTRA_DELAY = 1000l;
+		SteemJConfig config = SteemJConfig.getInstance();
+		AccountName account = config.getDefaultAccount();
+		while (true) {
+			List<ExtendedAccount> info = steemJ.getAccounts(Arrays.asList(account));
+			TimePointSec now = steemJ.getDynamicGlobalProperties().getTime();
+			TimePointSec lastPostTime = now;
+			for (ExtendedAccount e : info) {
+				lastPostTime = e.getLastPost();
+				break;
+			}
+			long since = now.getDateTimeAsTimestamp() - lastPostTime.getDateTimeAsTimestamp();
+			long sleepFor = MIN_DELAY + EXTRA_DELAY - since;
+			if (sleepFor < 0) {
+				return;
+			}
+			log.info("Last reply was within 3 seconds. Sleeping " + NF.format(sleepFor / 1000f) + " seconds.");
 			sleep(sleepFor);
 		}
 	}
