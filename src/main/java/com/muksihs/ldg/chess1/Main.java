@@ -243,7 +243,13 @@ public class Main extends AbstractApp {
 		}
 		
 		List<PlayerMatch> otherMatches = getRandomMatches(newPlayers, matches);
-		
+		for (PlayerMatch match: otherMatches) {
+			System.out.println("=== MATCH: ");
+			System.out.print(" -- Player 1: ");
+			System.out.println("@"+match.getPlayer1().getChallenger().getName());
+			System.out.print(" -- Player 2: ");
+			System.out.println("@"+match.getPlayer2().getChallenger().getName());
+		}
 	}
 
 	private List<PlayerMatch> getRandomMatches(Set<PlayerChallenge> newPlayers, List<PlayerMatch> excluding) {
