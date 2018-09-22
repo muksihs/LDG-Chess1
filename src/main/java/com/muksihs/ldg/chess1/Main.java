@@ -231,26 +231,18 @@ public class Main extends AbstractApp {
 
 		doNewPlayerSignupRejects(rejects);
 		
-		List<PlayerMatch> matches = getConfirmedMathes(newPlayers);
+		List<PlayerMatch> matches = getConfirmedMatches(newPlayers);
 		for (PlayerMatch match: matches) {
 			System.out.println("=== MATCH: ");
-			System.out.println(" -- Player 1");
-			System.out.println("    @"+match.getPlayer1().getChallenger().getName());
-			System.out.println("    @"+match.getPlayer1().getChallenged().getName());
-			System.out.println(" -- Player 2");
-			System.out.println("    @"+match.getPlayer2().getChallenger().getName());
-			System.out.println("    @"+match.getPlayer2().getChallenged().getName());
+			System.out.print(" -- Player 1: ");
+			System.out.println("@"+match.getPlayer1().getChallenger().getName());
+			System.out.print(" -- Player 2: ");
+			System.out.println("@"+match.getPlayer2().getChallenger().getName());
 		}
-
-		iPlayers = newPlayers.iterator();
-		while (iPlayers.hasNext()) {
-			PlayerChallenge newPlayerPair = iPlayers.next();
-			System.out.println(newPlayerPair.getChallenger().getName() + " challenges "
-					+ (newPlayerPair.getChallenged() == null ? "ANYONE" : newPlayerPair.getChallenged().getName()));
-		}
+		
 	}
 
-	private List<PlayerMatch> getConfirmedMathes(Set<PlayerChallenge> newPlayers) {
+	private List<PlayerMatch> getConfirmedMatches(Set<PlayerChallenge> newPlayers) {
 		List<PlayerMatch> matches = new ArrayList<>();
 		List<PlayerChallenge> player1List = new ArrayList<>(newPlayers);
 		List<PlayerChallenge> player2List = new ArrayList<>(newPlayers);
