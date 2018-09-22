@@ -595,9 +595,7 @@ public class Main extends AbstractApp {
 					}
 				}
 				replyBody=replyBody.toLowerCase();
-				replyBody=replyBody.replaceAll("</?p[^>]*?>", "\n");
-				replyBody=replyBody.replaceAll("<br[^>]*?>", "\n");
-				replyBody=replyBody.replaceAll("</?div[^>]*?>", "\n");
+				replyBody=replyBody.replaceAll("</?[^>]*?>", " ");
 				replyBody = StringUtils.normalizeSpace(replyBody).trim();
 				if (!replyBody.startsWith("play")) {
 					continue replies;
