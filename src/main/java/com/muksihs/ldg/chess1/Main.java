@@ -7,11 +7,13 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.nio.charset.StandardCharsets;
+import java.text.DateFormat;
 import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.GregorianCalendar;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -21,6 +23,8 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.TimeZone;
 
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.time.DateUtils;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 
 import com.cherokeelessons.gui.AbstractApp;
@@ -36,20 +40,25 @@ import com.github.bhlangonijr.chesslib.game.GameContext;
 import com.github.bhlangonijr.chesslib.move.Move;
 import com.github.bhlangonijr.chesslib.move.MoveGenerator;
 import com.github.bhlangonijr.chesslib.move.MoveGeneratorException;
+import com.muksihs.ldg.chess1.models.NewGameInviteInfo;
 import com.muksihs.ldg.chess1.models.SteemAccountInformation;
 
 import eu.bittrade.libs.steemj.SteemJ;
 import eu.bittrade.libs.steemj.apis.database.models.state.Discussion;
 import eu.bittrade.libs.steemj.apis.follow.model.BlogEntry;
+import eu.bittrade.libs.steemj.apis.follow.model.CommentBlogEntry;
 import eu.bittrade.libs.steemj.base.models.AccountName;
 import eu.bittrade.libs.steemj.base.models.DynamicGlobalProperty;
 import eu.bittrade.libs.steemj.base.models.ExtendedAccount;
+import eu.bittrade.libs.steemj.base.models.Permlink;
+import eu.bittrade.libs.steemj.base.models.TimePointSec;
 import eu.bittrade.libs.steemj.base.models.VoteState;
 import eu.bittrade.libs.steemj.configuration.SteemJConfig;
 import eu.bittrade.libs.steemj.enums.PrivateKeyType;
 import eu.bittrade.libs.steemj.exceptions.SteemCommunicationException;
 import eu.bittrade.libs.steemj.exceptions.SteemResponseException;
-import steem.models.CommentMetadata;
+import eu.bittrade.libs.steemj.util.SteemJUtils;
+import steem.models.ChessCommentMetadata;
 
 public class Main extends AbstractApp {
 
@@ -108,10 +117,11 @@ public class Main extends AbstractApp {
 			throw new IllegalArgumentException("You must provide an auth file using --auth-file <FILE-NAME>.");
 		}
 	}
-	
+
 	private Map<String, Object> extraMetadata;
-	private Map<String, Object> getAppMetadata(){
-		if (extraMetadata==null) {
+
+	private Map<String, Object> getAppMetadata() {
+		if (extraMetadata == null) {
 			extraMetadata = new HashMap<>();
 			extraMetadata.put("app", "LDG-Chess1/20180921");
 		}
@@ -121,12 +131,20 @@ public class Main extends AbstractApp {
 	private SteemJ steemJ;
 	private AccountName botAccount;
 	private ObjectMapper json;
+
 	@Override
 	protected void execute() throws IOException, SecurityException, Exception {
 		SteemAccountInformation accountInfo = getKeyAuthData(authFile);
 		steemJ = initilizeSteemJ(accountInfo);
 		botAccount = accountInfo.getAccountName();
-		
+
+		doUpvoteChecks();
+		doAnnounceGamePost();
+		doRunGameTurns();
+
+		if (true)
+			return;
+
 		// TODO Auto-generated method stub
 		// "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 		// "rnbqkbnr/ppp1pppp/8/3p4/3P4/4P3/PPP11PPP/RNBQKBNR w KQkq - 0 1"
@@ -155,7 +173,58 @@ public class Main extends AbstractApp {
 			System.out.println("HISTORY: " + history);
 		}
 	}
-	
+
+	private void doRunGameTurns() throws JsonParseException, JsonMappingException, IOException,
+			SteemCommunicationException, SteemResponseException {
+		Set<String> already = new HashSet<>();
+		List<CommentBlogEntry> entries = steemJ.getBlog(botAccount, 0, (short) 100);
+		gameScan: for (CommentBlogEntry entry : entries) {
+			// if not by game master, SKIP
+			if (entry.getComment() == null) {
+				System.err.println("NULL Comment?");
+				continue;
+			}
+			if (!entry.getComment().getAuthor().equals(botAccount)) {
+				continue;
+			}
+
+			Permlink permlink = entry.getComment().getPermlink();
+			ChessCommentMetadata metadata = json.readValue(entry.getComment().getJsonMetadata(),
+					ChessCommentMetadata.class);
+			if (metadata == null) {
+				System.err.println("No metadata: " + permlink.getLink());
+				continue gameScan;
+			}
+			Set<String> tags = new HashSet<>(Arrays.asList(metadata.getTags()));
+
+			if (!tags.contains("chess")) {
+				continue gameScan;
+			}
+			if (tags.contains("new-game")) {
+				continue gameScan;
+			}
+			String gameId = null;
+			for (String tag : tags) {
+				if (!tag.startsWith("game-")) {
+					continue;
+				}
+				gameId = StringUtils.substringAfter(tag, "-");
+				if (already.contains(tag)) {
+					continue gameScan;
+				}
+				already.add(tag);
+				break;
+			}
+			if (gameId == null) {
+				continue gameScan;
+			}
+			if (metadata.getGameData() == null) {
+				System.err.println("No chess game data: " + permlink.getLink());
+				continue gameScan;
+			}
+		}
+	}
+
 	/**
 	 * Upvote any posts that we haven't up voted yet that others have voted on, this
 	 * rewards people who upvote our posts to encourage them to keep up voting our
@@ -170,7 +239,7 @@ public class Main extends AbstractApp {
 	 * @throws JsonMappingException
 	 * @throws JsonParseException
 	 */
-	private void doUpvoteCheck() throws SteemCommunicationException, SteemResponseException, JsonParseException,
+	private void doUpvoteChecks() throws SteemCommunicationException, SteemResponseException, JsonParseException,
 			JsonMappingException, IOException {
 
 		BigDecimal voteThreshold = new BigDecimal("90.00");
@@ -206,7 +275,7 @@ public class Main extends AbstractApp {
 					sleep(500);
 				}
 			}
-			CommentMetadata metadata = json.readValue(article.getJsonMetadata(), CommentMetadata.class);
+			ChessCommentMetadata metadata = json.readValue(article.getJsonMetadata(), ChessCommentMetadata.class);
 			Set<String> tags = new HashSet<>(Arrays.asList(metadata.getTags()));
 			if (!tags.contains("chess")) {
 				continue forBlogEntries;
@@ -249,7 +318,7 @@ public class Main extends AbstractApp {
 			}
 		}
 	}
-	
+
 	private void waitIfLowBandwidth() {
 		NumberFormat nf = NumberFormat.getInstance();
 		nf.setMaximumFractionDigits(2);
@@ -268,7 +337,7 @@ public class Main extends AbstractApp {
 			}
 		}
 	}
-	
+
 	private boolean isLowBandwidth() {
 		try {
 			double bandwidthUsed = (double) Math.ceil(10000d * getBandwidthUsedPercent()) / 100d;
@@ -280,8 +349,9 @@ public class Main extends AbstractApp {
 			return true;
 		}
 	}
+
 	private double bandwidthRequiredPercent = 65d;
-	
+
 	private double getBandwidthUsedPercent() throws SteemCommunicationException, SteemResponseException {
 		double MILLION = 1000000d;
 		double STEEMIT_BANDWIDTH_AVERAGE_WINDOW_SECONDS = 60 * 60 * 24 * 7;
@@ -317,7 +387,7 @@ public class Main extends AbstractApp {
 		double bandwidthUsedPercent = newBandwidth / bandwidthAllocated;
 		return bandwidthUsedPercent;
 	}
-	
+
 	private ExtendedAccount getExtendedAccount() throws SteemCommunicationException, SteemResponseException {
 		for (int retries = 0; retries < 10; retries++) {
 			try {
@@ -337,7 +407,6 @@ public class Main extends AbstractApp {
 		return null;
 	}
 
-	
 	private SteemAccountInformation getKeyAuthData(File authFile) throws FileNotFoundException, IOException {
 		SteemAccountInformation account = new SteemAccountInformation();
 		Properties steemConfig = new Properties();
@@ -360,7 +429,7 @@ public class Main extends AbstractApp {
 		}
 		return account;
 	}
-	
+
 	private SteemJ initilizeSteemJ(SteemAccountInformation accountInfo)
 			throws SteemCommunicationException, SteemResponseException {
 		SteemJConfig myConfig = SteemJConfig.getInstance();
@@ -380,6 +449,7 @@ public class Main extends AbstractApp {
 		myConfig.getPrivateKeyStorage().addAccount(myConfig.getDefaultAccount(), privateKeys);
 		return new SteemJ();
 	}
+
 	private void initJackson() {
 		json = new ObjectMapper();
 		json.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
@@ -387,4 +457,211 @@ public class Main extends AbstractApp {
 		dateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
 		json.setDateFormat(dateFormat);
 	}
+
+	private void doAnnounceGamePost() throws IOException, SteemCommunicationException, SteemResponseException {
+		
+		if (!isNeedAnnounceNewGamePost()) {
+			System.err.println("--- NO ANNOUNCE GAME JOIN POST - ONE STILL ACTIVE");
+			return;
+		}
+		System.err.println("--- DO ANNOUNCE NEW GAME JOIN POST");
+		
+		NewGameInviteInfo info = generateNewGameInviteHtml();
+		String[] tags = new String[5];
+		tags[0] = "chess";
+		tags[1] = "games";
+		tags[2] = "new-game";
+		tags[3] = "contest";
+		tags[4] = "game-" + info.getGameId();
+		while (true) {
+			waitIfLowBandwidth();
+			try {
+				System.out.println("POSTING: " + info.getTitle());
+				waitCheckBeforePosting(steemJ);
+				steemJ.createPost(info.getTitle(), info.getHtml(), tags, MIME_HTML, getAppMetadata());
+				return;
+			} catch (Exception e) {
+				System.err.println("Posting error. Sleeping 5 minutes.");
+				if (e.getMessage().contains("STEEMIT_MIN_ROOT_COMMENT_INTERVAL")) {
+					System.err.println("STEEMIT_MIN_ROOT_COMMENT_INTERVAL");
+				} else {
+					System.err.println(e.getClass().getName() + ":\n" + e.getMessage());
+				}
+				sleep(5l * 60l * 1000l);
+			}
+		}
+	}
+
+	private boolean isNeedAnnounceNewGamePost() throws SteemCommunicationException, SteemResponseException, JsonParseException, JsonMappingException, IOException {
+		List<CommentBlogEntry> entries = steemJ.getBlog(botAccount, 0, (short) 100);
+		Date mostRecent = new Date(0);
+		gameScan: for (CommentBlogEntry entry : entries) {
+			// if not by game master, SKIP
+			if (entry.getComment() == null) {
+				System.err.println("NULL Comment?");
+				continue;
+			}
+			if (!entry.getComment().getAuthor().equals(botAccount)) {
+				continue;
+			}
+
+			Permlink permlink = entry.getComment().getPermlink();
+			ChessCommentMetadata metadata = json.readValue(entry.getComment().getJsonMetadata(),
+					ChessCommentMetadata.class);
+			if (metadata == null) {
+				System.err.println("No metadata: " + permlink.getLink());
+				continue gameScan;
+			}
+			Set<String> tags = new HashSet<>(Arrays.asList(metadata.getTags()));
+
+			if (!tags.contains("chess")) {
+				continue gameScan;
+			}
+			if (!tags.contains("new-game")) {
+				continue gameScan;
+			}
+			Date created = entry.getComment().getCreated().getDateTimeAsDate();
+			if (mostRecent.before(created)) {
+				mostRecent=created;
+			}
+		}
+		Date oldestThreshold = DateUtils.addDays(new Date(), -5);
+		return mostRecent.before(oldestThreshold);
+	}
+
+	private static final String MIME_HTML = "text/html";
+	private static final String LDQUO = "\u201c";
+	private static final String RDQUO = "\u201d";
+	private static final String LSQUO = "\u2018";
+	private static final String RSQUO = "\u2019";
+
+	private static String basicEscape(String text) {
+		return text.replace("&", "&amp;").replace("<", "&lt;").replaceAll(">", "&gt;");
+	}
+
+	private NewGameInviteInfo generateNewGameInviteHtml() throws IOException {
+
+		System.out.println("Generating HTML for new game invite.");
+		StringBuilder gameInvite = new StringBuilder();
+		gameInvite.append("<html>");
+		gameInvite.append("<div class='pull-right'>");
+		gameInvite.append("<img src='http://www.fen-to-image.com/image/128/double/coords/rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR'/>");
+		gameInvite.append("</div>\n");
+		gameInvite.append("<h1>(BETA!) Leather Dog Chess - New Game Invite</h1>\n");
+		gameInvite.append("<h3>Attention Game Players!</h3>\n");
+		gameInvite.append("<p>");
+		gameInvite.append("Reply to this post with `play` to join a chess game.");
+		gameInvite.append("</p>\n");
+		gameInvite.append("<h3>ONLY FOR BETA TESTERS WHO DON" + RSQUO + "T MIND THINGS BREAKING!</h3>\n");
+		gameInvite.append("<h4>More about Leather Dog Chess</h4>\n");
+		gameInvite.append("<p>The first game will commence shortly");
+		gameInvite.append(" after ");
+		gameInvite.append(" there are at least two players registered.</p>\n");
+		gameInvite.append("<p>Players will be assigned randomly.</p>\n");
+		gameInvite.append("<p>Initiative will be assigned randomly.</p>\n");
+		gameInvite.append("<p>This is <strong>NOT</strong> speed chess.");
+		gameInvite.append(" The bot will not process orders more than a few times a day!</p>\n");
+		gameInvite.append("<p>The game bot uses the same coordinate system as " + LDQUO
+				+ "<a href='https://en.wikipedia.org/wiki/Algebraic_notation_(chess)'>");
+		gameInvite.append("Algebraic notation (or AN)</a> for describing the moves in a game.</p>\n");
+		gameInvite.append(
+				"<p>Unlike full AN instead you reply with [FROM] [TO] for a move. And [FROM] [TO] [PROMOTE] for pawn promotions.</p>\n");
+		gameInvite.append("<p>Better examples will be provided later.</p>\n");
+		gameInvite.append(
+				"<center><h4><a href='https://github.com/muksihs/LDG-Chess1'>https://github.com/muksihs/LDG-Chess1</a></h4></center>\n");
+		gameInvite.append("</html>\n");
+
+		String gameId = String.valueOf(System.currentTimeMillis() / 1000l / 60l / 5l);
+		String title = "(BETA!) " + generateGameInviteTitle(gameId);
+		String permlink = "@" + botAccount.getName() + "/" + SteemJUtils.createPermlinkString(title);
+		String gameInviteHtml = gameInvite.toString();
+		gameInviteHtml = gameInviteHtml.replace(_PERMLINK, permlink);
+		NewGameInviteInfo info = new NewGameInviteInfo();
+		info.setGameId(gameId);
+		info.setPermlink(permlink);
+		info.setTitle(title);
+		info.setHtml(gameInviteHtml);
+		return info;
+	}
+
+	private static final String _PERMLINK = "_permlink_";
+
+	private String generateGameInviteTitle(String gameId) {
+		String title = "Leather Dog Chess - New Player Signup! " + " - Game " + gameId;
+		return title;
+	}
+
+	private GregorianCalendar newGameDeadline(Date date) {
+		GregorianCalendar cal = new GregorianCalendar();
+		cal.setTime(date);
+		return newGameDeadline(cal);
+	}
+
+	private GregorianCalendar newGameDeadline(GregorianCalendar cal) {
+		cal.setTimeZone(EST5EDT);
+		cal.add(GregorianCalendar.DAY_OF_YEAR, +2);
+		// cal.add(GregorianCalendar.HOUR_OF_DAY, 2);
+		int minute = cal.get(GregorianCalendar.MINUTE);
+		// use int math to set to lowest matching quarter hour value;
+		minute /= 15;
+		minute *= 15;
+		cal.set(GregorianCalendar.MINUTE, minute);
+		cal.set(GregorianCalendar.SECOND, 0);
+		cal.set(GregorianCalendar.MILLISECOND, 0);
+		DateFormat df = DateFormat.getDateTimeInstance();
+		df.setTimeZone(EST5EDT);
+		// String deadlineEst5Edt = basicEscape(df.format(cal.getTime())) + " EST5EDT";
+		return cal;
+	}
+
+	private GregorianCalendar newTurnDeadline(Date date) {
+		GregorianCalendar cal = new GregorianCalendar();
+		cal.setTime(date);
+		return newTurnDeadline(cal);
+	}
+
+	private GregorianCalendar newTurnDeadline(GregorianCalendar cal) {
+		cal.setTimeZone(EST5EDT);
+		cal.add(GregorianCalendar.DAY_OF_YEAR, +3);
+		int minute = cal.get(GregorianCalendar.MINUTE);
+		// use int math to set to lowest matching quarter hour value;
+		minute /= 15;
+		minute *= 15;
+		cal.set(GregorianCalendar.MINUTE, minute);
+		cal.set(GregorianCalendar.SECOND, 0);
+		cal.set(GregorianCalendar.MILLISECOND, 0);
+		DateFormat df = DateFormat.getDateTimeInstance();
+		df.setTimeZone(EST5EDT);
+		// String deadlineEst5Edt = basicEscape(df.format(cal.getTime())) + " EST5EDT";
+		return cal;
+	}
+
+	private static final TimeZone EST5EDT = TimeZone.getTimeZone("EST5EDT");
+	private static final String DIV_PULL_RIGHT_START = "<div class='pull-right' style='float:right;padding:1rem;max-width:50%;'>";
+	private static final String DIV_PULL_LEFT_START = "<div class='pull-left' style='float:left;padding:1rem;max-width:50%;'>";
+
+	private void waitCheckBeforePosting(SteemJ steemJ) throws SteemCommunicationException, SteemResponseException {
+		long FIVE_MINUTES = 1000l * 60l * 5l;
+		long EXTRA_SECOND = 1000l;
+		SteemJConfig config = SteemJConfig.getInstance();
+		AccountName account = config.getDefaultAccount();
+		while (true) {
+			List<ExtendedAccount> info = steemJ.getAccounts(Arrays.asList(account));
+			TimePointSec now = steemJ.getDynamicGlobalProperties().getTime();
+			TimePointSec lastPostTime = now;
+			for (ExtendedAccount e : info) {
+				lastPostTime = e.getLastRootPost();
+				break;
+			}
+			long since = now.getDateTimeAsTimestamp() - lastPostTime.getDateTimeAsTimestamp();
+			long sleepFor = FIVE_MINUTES + EXTRA_SECOND - since;
+			if (sleepFor < 0) {
+				return;
+			}
+			log.info("Last post was within 5 minutes. Sleeping " + NF.format(sleepFor / 60000f) + " minutes.");
+			sleep(sleepFor);
+		}
+	}
+
+	private static final NumberFormat NF = NumberFormat.getInstance();
 }
