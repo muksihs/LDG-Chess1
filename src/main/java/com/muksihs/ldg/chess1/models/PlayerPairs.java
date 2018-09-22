@@ -1,6 +1,7 @@
 package com.muksihs.ldg.chess1.models;
 
 import eu.bittrade.libs.steemj.base.models.AccountName;
+import eu.bittrade.libs.steemj.base.models.Permlink;
 
 public class PlayerPairs {
 	@Override
@@ -9,8 +10,10 @@ public class PlayerPairs {
 		int result = 1;
 		result = prime * result + ((challenged == null) ? 0 : challenged.hashCode());
 		result = prime * result + ((challenger == null) ? 0 : challenger.hashCode());
+		result = prime * result + ((permlink == null) ? 0 : permlink.hashCode());
 		return result;
 	}
+	private Permlink permlink;
 	@Override
 	public boolean equals(Object obj) {
 		if (this == obj) {
@@ -37,6 +40,13 @@ public class PlayerPairs {
 		} else if (!challenger.equals(other.challenger)) {
 			return false;
 		}
+		if (permlink == null) {
+			if (other.permlink != null) {
+				return false;
+			}
+		} else if (!permlink.equals(other.permlink)) {
+			return false;
+		}
 		return true;
 	}
 	private AccountName challenger;
@@ -52,5 +62,11 @@ public class PlayerPairs {
 	}
 	public void setChallenged(AccountName challenged) {
 		this.challenged = challenged;
+	}
+	public Permlink getPermlink() {
+		return permlink;
+	}
+	public void setPermlink(Permlink permlink) {
+		this.permlink = permlink;
 	}
 }

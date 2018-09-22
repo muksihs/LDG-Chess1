@@ -145,6 +145,7 @@ public class Main extends AbstractApp {
 		Set<PlayerPairs> newPlayers = newPlayersWantingToPlay();
 		if (!newPlayers.isEmpty()) {
 			for (PlayerPairs newPlayerPair: newPlayers) {
+				System.out.println(newPlayerPair.getPermlink().getLink());
 				System.out.println(newPlayerPair.getChallenger().getName()+" challenges "+(newPlayerPair.getChallenged()==null?"ANYONE":newPlayerPair.getChallenged().getName()));
 			}
 		}
@@ -579,9 +580,6 @@ public class Main extends AbstractApp {
 				AccountName challenger = reply.getAuthor();
 				String replyBody = reply.getBody();
 				List<String> repliesToPlayer = reply.getReplies();
-				System.out.println("@"+challenger.getName());
-				System.out.println(replyBody);
-				System.out.println("Children: "+reply.getChildren());
 				if (reply.getChildren()>0) {
 					List<Discussion> maybeBotReplies = steemJ.getContentReplies(botAccount, reply.getPermlink());
 					if (maybeBotReplies!=null&&!maybeBotReplies.isEmpty()) {
@@ -596,13 +594,18 @@ public class Main extends AbstractApp {
 						}
 					}
 				}
-				if (!replyBody.toUpperCase().contains("PLAY")) {
+				replyBody=replyBody.toLowerCase();
+				replyBody=replyBody.replaceAll("</?p[^>]*?>", "\n");
+				replyBody=replyBody.replaceAll("<br[^>]*?>", "\n");
+				replyBody=replyBody.replaceAll("</?div[^>]*?>", "\n");
+				replyBody = StringUtils.normalizeSpace(replyBody).trim();
+				if (!replyBody.startsWith("play")) {
 					continue replies;
 				}
 				PlayerPairs pair = new PlayerPairs();
 				pair.setChallenger(challenger);
+				pair.setPermlink(reply.getPermlink());
 				extractChallenged: if (replyBody.contains("@")) {
-					replyBody = StringUtils.normalizeSpace(replyBody);
 					replyBody = StringUtils.substringAfter(replyBody, "play").trim();
 					if (!replyBody.startsWith("@")) {
 						break extractChallenged;
