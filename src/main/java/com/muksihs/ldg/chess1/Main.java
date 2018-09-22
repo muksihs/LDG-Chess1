@@ -41,6 +41,7 @@ import com.github.bhlangonijr.chesslib.move.Move;
 import com.github.bhlangonijr.chesslib.move.MoveGenerator;
 import com.github.bhlangonijr.chesslib.move.MoveGeneratorException;
 import com.muksihs.ldg.chess1.models.NewGameInviteInfo;
+import com.muksihs.ldg.chess1.models.PlayerPairs;
 import com.muksihs.ldg.chess1.models.SteemAccountInformation;
 
 import eu.bittrade.libs.steemj.SteemJ;
@@ -140,6 +141,14 @@ public class Main extends AbstractApp {
 
 		doUpvoteChecks();
 		doAnnounceGamePost();
+		
+		Set<PlayerPairs> newPlayers = newPlayersWantingToPlay();
+		if (!newPlayers.isEmpty()) {
+			for (PlayerPairs newPlayerPair: newPlayers) {
+				System.out.println(newPlayerPair.getChallenger().getName()+" challenges "+(newPlayerPair.getChallenged()==null?"ANYONE":newPlayerPair.getChallenged().getName()));
+			}
+		}
+		
 		doRunGameTurns();
 
 		if (true)
@@ -459,13 +468,13 @@ public class Main extends AbstractApp {
 	}
 
 	private void doAnnounceGamePost() throws IOException, SteemCommunicationException, SteemResponseException {
-		
+
 		if (!isNeedAnnounceNewGamePost()) {
 			System.err.println("--- NO ANNOUNCE GAME JOIN POST - ONE STILL ACTIVE");
 			return;
 		}
 		System.err.println("--- DO ANNOUNCE NEW GAME JOIN POST");
-		
+
 		NewGameInviteInfo info = generateNewGameInviteHtml();
 		String[] tags = new String[5];
 		tags[0] = "chess";
@@ -492,7 +501,8 @@ public class Main extends AbstractApp {
 		}
 	}
 
-	private boolean isNeedAnnounceNewGamePost() throws SteemCommunicationException, SteemResponseException, JsonParseException, JsonMappingException, IOException {
+	private boolean isNeedAnnounceNewGamePost() throws SteemCommunicationException, SteemResponseException,
+			JsonParseException, JsonMappingException, IOException {
 		List<CommentBlogEntry> entries = steemJ.getBlog(botAccount, 0, (short) 100);
 		Date mostRecent = new Date(0);
 		gameScan: for (CommentBlogEntry entry : entries) {
@@ -522,11 +532,93 @@ public class Main extends AbstractApp {
 			}
 			Date created = entry.getComment().getCreated().getDateTimeAsDate();
 			if (mostRecent.before(created)) {
-				mostRecent=created;
+				mostRecent = created;
 			}
 		}
 		Date oldestThreshold = DateUtils.addDays(new Date(), -5);
 		return mostRecent.before(oldestThreshold);
+	}
+
+	private Set<PlayerPairs> newPlayersWantingToPlay() throws SteemCommunicationException, SteemResponseException,
+			JsonParseException, JsonMappingException, IOException {
+		List<CommentBlogEntry> entries = steemJ.getBlog(botAccount, 0, (short) 100);
+		Date oldestThreshold = DateUtils.addDays(new Date(), -15);
+		Set<PlayerPairs> pairings = new HashSet<>();
+		gameScan: for (CommentBlogEntry entry : entries) {
+			// if not by game master, SKIP
+			if (entry.getComment() == null) {
+				System.err.println("NULL Comment?");
+				continue;
+			}
+			if (!entry.getComment().getAuthor().equals(botAccount)) {
+				continue;
+			}
+			Permlink permlink = entry.getComment().getPermlink();
+			ChessCommentMetadata metadata = json.readValue(entry.getComment().getJsonMetadata(),
+					ChessCommentMetadata.class);
+			if (metadata == null) {
+				System.err.println("No metadata: " + permlink.getLink());
+				continue gameScan;
+			}
+			Set<String> tags = new HashSet<>(Arrays.asList(metadata.getTags()));
+			if (!tags.contains("chess")) {
+				continue gameScan;
+			}
+			if (!tags.contains("new-game")) {
+				continue gameScan;
+			}
+			Date created = entry.getComment().getCreated().getDateTimeAsDate();
+			if (created.before(oldestThreshold)) {
+				continue gameScan;
+			}
+			List<Discussion> replies = steemJ.getContentReplies(botAccount, permlink);
+			if (replies==null || replies.isEmpty()) {
+				continue gameScan;
+			}
+			replies: for (Discussion reply: replies) {
+				AccountName challenger = reply.getAuthor();
+				String replyBody = reply.getBody();
+				List<String> repliesToPlayer = reply.getReplies();
+				System.out.println("@"+challenger.getName());
+				System.out.println(replyBody);
+				System.out.println("Children: "+reply.getChildren());
+				if (reply.getChildren()>0) {
+					List<Discussion> maybeBotReplies = steemJ.getContentReplies(botAccount, reply.getPermlink());
+					if (maybeBotReplies!=null&&!maybeBotReplies.isEmpty()) {
+						maybeBotReplies: for (Discussion maybeBotReply: maybeBotReplies) {
+							if (!botAccount.equals(maybeBotReply.getAuthor())) {
+								continue maybeBotReplies;
+							}
+							String maybeBotReplyBody = maybeBotReply.getBody();
+							if (maybeBotReplyBody.toUpperCase().contains("CHALLENGE ACCEPTED")) {
+								continue replies;
+							}
+						}
+					}
+				}
+				if (!replyBody.toUpperCase().contains("PLAY")) {
+					continue replies;
+				}
+				PlayerPairs pair = new PlayerPairs();
+				pair.setChallenger(challenger);
+				extractChallenged: if (replyBody.contains("@")) {
+					replyBody = StringUtils.normalizeSpace(replyBody);
+					replyBody = StringUtils.substringAfter(replyBody, "play").trim();
+					if (!replyBody.startsWith("@")) {
+						break extractChallenged;
+					}
+					replyBody = StringUtils.substringBefore(replyBody, " ").trim();
+					replyBody = replyBody.substring(1); //skip the '@'
+					AccountName challenged=new AccountName(replyBody);
+					List<ExtendedAccount> valid = steemJ.getAccounts(Arrays.asList(challenged));
+					if (valid!=null || !valid.isEmpty()) {
+						pair.setChallenged(challenged);
+					}
+				}
+				pairings.add(pair);
+			}
+		}
+		return pairings;
 	}
 
 	private static final String MIME_HTML = "text/html";
@@ -545,13 +637,18 @@ public class Main extends AbstractApp {
 		StringBuilder gameInvite = new StringBuilder();
 		gameInvite.append("<html>");
 		gameInvite.append("<div class='pull-right'>");
-		gameInvite.append("<img src='http://www.fen-to-image.com/image/128/double/coords/rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR'/>");
+		gameInvite.append(
+				"<img src='http://www.fen-to-image.com/image/128/double/coords/rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR'/>");
 		gameInvite.append("</div>\n");
 		gameInvite.append("<h1>(BETA!) Leather Dog Chess - New Game Invite</h1>\n");
 		gameInvite.append("<h3>Attention Game Players!</h3>\n");
-		gameInvite.append("<p>");
-		gameInvite.append("Reply to this post with `play` to join a chess game.");
-		gameInvite.append("</p>\n");
+		gameInvite.append("<ul>\n");
+		gameInvite.append("<li>Reply to this post with `play @specificusername`");
+		gameInvite.append("to challenge a specific user to a chess game. ");
+		gameInvite.append("They will need to reply to this post with a `play @yourusername`");
+		gameInvite.append(" to accept your challenge.</li>\n");
+		gameInvite.append("<li>Reply to this post with just `play` to join a random chess game.</li>\n");
+		gameInvite.append("</ul>\n");
 		gameInvite.append("<h3>ONLY FOR BETA TESTERS WHO DON" + RSQUO + "T MIND THINGS BREAKING!</h3>\n");
 		gameInvite.append("<h4>More about Leather Dog Chess</h4>\n");
 		gameInvite.append("<p>The first game will commence shortly");
