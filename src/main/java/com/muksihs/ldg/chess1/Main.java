@@ -12,12 +12,14 @@ import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
@@ -240,6 +242,47 @@ public class Main extends AbstractApp {
 			System.out.println("@"+match.getPlayer2().getChallenger().getName());
 		}
 		
+		List<PlayerMatch> otherMatches = getRandomMatches(newPlayers, matches);
+		
+	}
+
+	private List<PlayerMatch> getRandomMatches(Set<PlayerChallenge> newPlayers, List<PlayerMatch> excluding) {
+		List<PlayerChallenge> playerList = new ArrayList<>(newPlayers);
+		
+		List<PlayerMatch> matches = new ArrayList<>();
+		Set<Permlink> alreadyPermlink = new HashSet<>();
+		Set<String> already = new HashSet<>();
+		
+		for (PlayerMatch match: excluding) {
+			alreadyPermlink.add(match.getPlayer1().getPermlink());
+			alreadyPermlink.add(match.getPlayer2().getPermlink());
+		}
+		
+		playerList.removeIf(p->p.getChallenged()!=null);
+		playerList.removeIf(p->alreadyPermlink.contains(p.getPermlink()));
+		
+		Collections.shuffle(playerList);
+		ListIterator<PlayerChallenge> iPlayers = playerList.listIterator();
+		while (iPlayers.hasNext()) {
+			PlayerChallenge player1 = iPlayers.next();
+			if (!iPlayers.hasNext()) {
+				break;
+			}
+			PlayerChallenge player2 = iPlayers.next();
+			PlayerMatch match = new PlayerMatch();
+			match.setPlayer1(player1);
+			match.setPlayer2(player2);
+			if (already.contains(match.getSemaphore())) {
+				//go back one so that player2 becomes player1 for next in list
+				iPlayers.previous();
+				continue;
+			}
+			matches.add(match);
+			already.add(match.getSemaphore());
+			already.add(match.getInverseSemaphore());
+		}
+		
+		return matches;
 	}
 
 	private List<PlayerMatch> getConfirmedMatches(Set<PlayerChallenge> newPlayers) {
