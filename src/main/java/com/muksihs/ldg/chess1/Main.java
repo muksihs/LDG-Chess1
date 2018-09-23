@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Random;
 import java.util.Set;
 import java.util.TimeZone;
 
@@ -33,15 +34,28 @@ import com.cherokeelessons.gui.AbstractApp;
 import com.cherokeelessons.gui.MainWindow;
 import com.cherokeelessons.gui.MainWindow.Config;
 import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.bhlangonijr.chesslib.Board;
+import com.github.bhlangonijr.chesslib.Side;
 import com.github.bhlangonijr.chesslib.Square;
+import com.github.bhlangonijr.chesslib.game.Event;
+import com.github.bhlangonijr.chesslib.game.Game;
 import com.github.bhlangonijr.chesslib.game.GameContext;
+import com.github.bhlangonijr.chesslib.game.GameFactory;
+import com.github.bhlangonijr.chesslib.game.GameResult;
+import com.github.bhlangonijr.chesslib.game.Player;
+import com.github.bhlangonijr.chesslib.game.PlayerType;
+import com.github.bhlangonijr.chesslib.game.Round;
+import com.github.bhlangonijr.chesslib.game.VariationType;
 import com.github.bhlangonijr.chesslib.move.Move;
+import com.github.bhlangonijr.chesslib.move.MoveConversionException;
+import com.github.bhlangonijr.chesslib.move.MoveException;
 import com.github.bhlangonijr.chesslib.move.MoveGenerator;
 import com.github.bhlangonijr.chesslib.move.MoveGeneratorException;
+import com.github.bhlangonijr.chesslib.move.MoveList;
 import com.muksihs.ldg.chess1.models.NewGameInviteInfo;
 import com.muksihs.ldg.chess1.models.PlayerChallenge;
 import com.muksihs.ldg.chess1.models.SteemAccountInformation;
@@ -56,6 +70,7 @@ import eu.bittrade.libs.steemj.base.models.ExtendedAccount;
 import eu.bittrade.libs.steemj.base.models.Permlink;
 import eu.bittrade.libs.steemj.base.models.TimePointSec;
 import eu.bittrade.libs.steemj.base.models.VoteState;
+import eu.bittrade.libs.steemj.base.models.operations.CommentOperation;
 import eu.bittrade.libs.steemj.configuration.SteemJConfig;
 import eu.bittrade.libs.steemj.enums.PrivateKeyType;
 import eu.bittrade.libs.steemj.exceptions.SteemCommunicationException;
@@ -63,6 +78,7 @@ import eu.bittrade.libs.steemj.exceptions.SteemInvalidTransactionException;
 import eu.bittrade.libs.steemj.exceptions.SteemResponseException;
 import eu.bittrade.libs.steemj.util.SteemJUtils;
 import steem.models.ChessCommentMetadata;
+import steem.models.ChessGameData;
 
 public class Main extends AbstractApp {
 
@@ -127,7 +143,7 @@ public class Main extends AbstractApp {
 	private Map<String, Object> getAppMetadata() {
 		if (extraMetadata == null) {
 			extraMetadata = new HashMap<>();
-			extraMetadata.put("app", "LDG-Chess1/20180921");
+			extraMetadata.put("app", "LDG-Chess1/20180923");
 		}
 		return new HashMap<>(extraMetadata);
 	}
@@ -145,44 +161,15 @@ public class Main extends AbstractApp {
 		doUpvoteChecks();
 		doAnnounceGamePost();
 		doRunGameTurns();
-		doNewPlayerSignups();
-
-		if (true)
-			return;
-
-		// TODO Auto-generated method stub
-		// "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
-		// "rnbqkbnr/ppp1pppp/8/3p4/3P4/4P3/PPP11PPP/RNBQKBNR w KQkq - 0 1"
-		List<Move> history = new ArrayList<>();
-		Move move = new Move(Square.E2, Square.E3);
-		history.add(move);
-		board.doMove(move, true);
-		move = new Move(Square.D7, Square.D5);
-		history.add(move);
-		board.doMove(move, true);
-		move = new Move(Square.D2, Square.D4);
-		history.add(move);
-		board.doMove(move, true);
-		move = new Move(Square.C8, Square.G4);
-		Set<Move> legal = new HashSet<>(MoveGenerator.generateLegalMoves(board));
-		if (!legal.contains(move)) {
-			System.err.println("Not a legal move.");
-			System.out.println(DogChessUtils.getChessboardUrl(board.getFen(false)));
-		} else {
-			history.add(move);
-			board.doMove(move, true);
-			System.out.println(DogChessUtils.getChessboardUrl(board.getFen(false)));
-			System.out.println(DogChessUtils.getChessboardUrlRotated(board.getFen(false)));
-			System.out.println("FEN: " + board.getFen());
-			System.out.println("SIDE TO MOVE: " + board.getSideToMove());
-			System.out.println("HISTORY: " + history);
-		}
+		doStartNewMatches();
+		
 	}
 
-	private void doNewPlayerSignups() throws JsonParseException, JsonMappingException, SteemCommunicationException,
-			SteemResponseException, IOException, SteemInvalidTransactionException {
+	private void doStartNewMatches()
+			throws JsonParseException, JsonMappingException, SteemCommunicationException, SteemResponseException,
+			IOException, SteemInvalidTransactionException, MoveException, MoveConversionException {
 		Set<PlayerChallenge> newPlayers = newPlayersWantingToPlay();
-		Set<String> semaphores = getListOfActiveGames();
+		Set<String> activeMatches = getListOfActiveMatches();
 		Set<SignupReject> rejects = new HashSet<>();
 		Iterator<PlayerChallenge> iPlayers = newPlayers.iterator();
 		while (iPlayers.hasNext()) {
@@ -191,16 +178,19 @@ public class Main extends AbstractApp {
 			AccountName challenged = newPlayerPair.getChallenged();
 			Permlink permlink = newPlayerPair.getPermlink();
 			String[] tags = newPlayerPair.getTags().toArray(new String[0]);
-			String semaphore = "@" + challenger.getName();
+			String wantedMatch = "@" + challenger.getName();
+			String wantedMatchInverse = "-@" + challenger.getName();
 			if (challenged != null) {
-				semaphore += "-@" + challenged.getName();
+				wantedMatch += "-@" + challenged.getName();
+				wantedMatchInverse = "@" + challenged.getName() + wantedMatchInverse;
 			}
-			if (semaphores.contains(semaphore)) {
+
+			if (activeMatches.contains(wantedMatch) || activeMatches.contains(wantedMatchInverse)) {
 				SignupReject reject = new SignupReject();
 				reject.setChallenger(challenger);
 				reject.setPermlink(permlink);
 				reject.setTags(tags);
-				reject.setReason("<html><h3>Rejected</h3><h4>Match already in progress.</h4></html>");
+				reject.setReason("<html><h4>Rejected</h4><h5>Match already in progress.</h5></html>");
 				rejects.add(reject);
 				iPlayers.remove();
 				continue;
@@ -210,7 +200,7 @@ public class Main extends AbstractApp {
 				reject.setChallenger(challenger);
 				reject.setPermlink(permlink);
 				reject.setTags(tags);
-				reject.setReason("<html><h3>Rejected</h3><h4>You are not allowed to play yourself.</h4></html>");
+				reject.setReason("<html><h4>Rejected</h4><h5>You are not allowed to play yourself.</h5></html>");
 				rejects.add(reject);
 				iPlayers.remove();
 				continue;
@@ -222,8 +212,8 @@ public class Main extends AbstractApp {
 					reject.setChallenger(challenger);
 					reject.setPermlink(permlink);
 					reject.setTags(tags);
-					reject.setReason("<html><h3>Rejected</h3><h4>The account @" + challenged.getName()
-							+ " does not exist.</h4></html>");
+					reject.setReason("<html><h4>Rejected</h4><h5>The account @" + challenged.getName()
+							+ " does not exist.</h5></html>");
 					rejects.add(reject);
 					iPlayers.remove();
 					continue;
@@ -232,41 +222,242 @@ public class Main extends AbstractApp {
 		}
 
 		doNewPlayerSignupRejects(rejects);
-		
+
 		List<PlayerMatch> matches = getConfirmedMatches(newPlayers);
-		for (PlayerMatch match: matches) {
-			System.out.println("=== MATCH: ");
-			System.out.print(" -- Player 1: ");
-			System.out.println("@"+match.getPlayer1().getChallenger().getName());
-			System.out.print(" -- Player 2: ");
-			System.out.println("@"+match.getPlayer2().getChallenger().getName());
-		}
-		
 		List<PlayerMatch> otherMatches = getRandomMatches(newPlayers, matches);
-		for (PlayerMatch match: otherMatches) {
-			System.out.println("=== MATCH: ");
-			System.out.print(" -- Player 1: ");
-			System.out.println("@"+match.getPlayer1().getChallenger().getName());
-			System.out.print(" -- Player 2: ");
-			System.out.println("@"+match.getPlayer2().getChallenger().getName());
+		matches.addAll(otherMatches);
+		Map<String, Permlink> gameLinks = doPostNewMatches(matches);
+		for (PlayerMatch match : matches) {
+			Permlink permlink = gameLinks.get(match.getSemaphore());
+			if (permlink == null) {
+				continue;
+			}
+			notifyPlayersOfGameStart(match, permlink);
 		}
+
+	}
+
+	private void notifyPlayersOfGameStart(PlayerMatch match, Permlink permlink) {
+		notifyPlayerOfGameStart(permlink, match.getPlayer1());
+		notifyPlayerOfGameStart(permlink, match.getPlayer2());
+	}
+
+	private void notifyPlayerOfGameStart(Permlink permlink, PlayerChallenge player1) {
+		Permlink parentPermlink = player1.getPermlink();
+		String[] tags = player1.getTags().toArray(new String[0]);
+		StringBuilder notice = new StringBuilder();
+		notice.append("<html>\n");
+		notice.append("Match started: <a href='");
+		notice.append("https://busy.org/" + tags[0] + "/@" + botAccount.getName() + "/" + permlink.getLink());
+		notice.append("'>");
+		notice.append(permlink.getLink());
+		notice.append("</a>\n");
+		notice.append("</html>\n");
+		retries: for (int retries = 0; retries < 10; retries++) {
+			try {
+				waitCheckBeforeReplying(steemJ);
+				steemJ.createComment(player1.getChallenger(), parentPermlink, notice.toString(), tags, MIME_HTML,
+						getAppMetadata());
+				break retries;
+			} catch (SteemCommunicationException | SteemResponseException | SteemInvalidTransactionException e) {
+			}
+		}
+	}
+
+	private Map<String, Permlink> doPostNewMatches(List<PlayerMatch> matches)
+			throws MoveException, MoveConversionException {
+		Map<String, Permlink> gameLinks = new HashMap<>();
+		for (PlayerMatch match : matches) {
+			Board board = new Board();
+			board.getContext().setVariationType(VariationType.NORMAL);
+
+			String player1 = "@" + match.getPlayer1().getChallenger().getName();
+			String player2 = "@" + match.getPlayer2().getChallenger().getName();
+
+			Player p1 = GameFactory.newPlayer(PlayerType.HUMAN, player1);
+			Player p2 = GameFactory.newPlayer(PlayerType.HUMAN, player2);
+
+			Event newGame = GameFactory.newEvent("Leather Dog Chess 1");
+			newGame.setEndDate("");
+			newGame.setSite("https://busy.org/@leatherdog-games");
+			String startDate = new java.sql.Date(System.currentTimeMillis()).toString();
+			newGame.setStartDate(startDate);
+
+			Round startingRound = GameFactory.newRound(newGame, 0);
+
+			Game game = GameFactory.newGame("", startingRound);
+			game.setBoard(board);
+			game.setDate(startDate);
+			game.setResult(GameResult.ONGOING);
+			game.setVariation(board.getContext().getVariationType().name());
+			if (new Random().nextBoolean()) {
+				game.setWhitePlayer(p1);
+				game.setBlackPlayer(p2);
+			} else {
+				game.setWhitePlayer(p2);
+				game.setBlackPlayer(p1);
+			}
+			String wpName = game.getWhitePlayer().getName();
+			String bpName = game.getBlackPlayer().getName();
+			String gameId = "game-" + (System.currentTimeMillis() / (1000l * 60l * 5l));
+			game.setGameId(gameId);
+			game.setMoveText(new StringBuilder());
+
+			MoveList ml = new MoveList();
+
+			game.setHalfMoves(ml);
+			game.gotoLast();
+
+			StringBuilder gameTitle = new StringBuilder();
+			gameTitle.append("Chess " + wpName + " vs " + bpName + " - Round " + (1 + game.getRound().getNumber())
+					+ " - " + board.getSideToMove() + LSQUO + "s MOVE [" + gameId + "]");
+
+			System.out.println("=== " + gameTitle);
+			System.out.println("--- Game id: " + gameId);
+			System.out.println(game.getResult().getDescription());
+			System.out.println("FEN: " + board.getFen(true));
+			System.out.println("Draw: " + board.isDraw());
+			System.out.println("Mated: " + board.isMated());
+			System.out.println("Stalemate: " + board.isStaleMate());
+			System.out.println("Side to move: " + board.getSideToMove().name());
+			System.out.println("PGN:\n" + game.toPgn(true, true));
+
+			ChessGameData cgd = new ChessGameData();
+			cgd.setDraw(board.isDraw());
+			cgd.setFen(board.getFen(true));
+			cgd.setGameId(gameId);
+			cgd.setMated(board.isMated());
+			cgd.setMoveList(new ArrayList<>());
+			cgd.setPgn(game.toPgn(true, true));
+			cgd.setPlayerBlack(bpName);
+			cgd.setPlayerWhite(wpName);
+			cgd.setSideToMove(board.getSideToMove().name());
+			cgd.setPlayerToMove(board.getSideToMove().equals(Side.WHITE) ? wpName : bpName);
+			cgd.setStalemate(board.isStaleMate());
+			cgd.setVariationType(board.getContext().getVariationType().name());
+
+			Map<String, Object> metadata = getAppMetadata();
+			metadata.put("chessGameData", cgd);
+
+			List<String> tags = new ArrayList<>();
+			tags.add("chess");
+			tags.add("steemchess");
+			tags.add("chess-match");
+			tags.add("gaming");
+			tags.add(gameId);
+
+			String turnHtml = generateTurnHtml(cgd);
+
+			System.out.println(gameTitle.toString());
+			System.out.println(turnHtml);
+			try {
+				System.out.println(json.writeValueAsString(cgd));
+			} catch (JsonProcessingException e1) {
+			}
+			System.out.println("---");
+
+			retries: for (int retries = 0; retries < 10; retries++) {
+				try {
+					waitCheckBeforePosting(steemJ);
+					CommentOperation info = steemJ.createPost(gameTitle.toString(), turnHtml,
+							tags.toArray(new String[0]), MIME_HTML, metadata);
+					gameLinks.put(match.getSemaphore(), info.getPermlink());
+					break;
+				} catch (SteemCommunicationException | SteemResponseException | SteemInvalidTransactionException e) {
+					continue retries;
+				}
+			}
+		}
+		return gameLinks;
+	}
+
+	private String generateTurnHtml(ChessGameData cgd) {
+		// TODO Switch to using template HTML
+		StringBuilder sb = new StringBuilder();
+		sb.append("<html>\n");
+
+		sb.append("<p><center><strong>");
+		sb.append(
+				cgd.getPlayerWhite() + " vs " + cgd.getPlayerBlack() + " Round " + (1 + cgd.getMoveList().size() / 2));
+		sb.append("</strong></center></p>\n");
+
+		sb.append("<p><center><strong>");
+		sb.append(cgd.getSideToMove() + RSQUO + "S MOVE (" + cgd.getPlayerToMove() + ")");
+		sb.append("</strong></center></p>\n");
+
+		sb.append("<p><center>\n");
+		sb.append(DogChessUtils.getChessboardImageHtml(cgd.getFen()));
+		sb.append("\n</center></p>\n");
+		sb.append("<p><center>\n");
+		sb.append(DogChessUtils.getChessboardRotatedImageHtml(cgd.getFen()));
+		sb.append("\n</center></p>\n");
+		sb.append("<p>FEN: ");
+		sb.append(board.getFen(true));
+		sb.append("</p>\n");
+		sb.append(getInstructionsHtml());
+		sb.append("\n</html>\n");
+		return sb.toString();
+	}
+
+	private StringBuilder getInstructionsHtml() {
+		StringBuilder sb = new StringBuilder();
+		sb.append("<div>");
+		sb.append("<strong>To move a piece</strong> reply with 'MOVE: '");
+		sb.append("followed by the square to move a piece from ");
+		sb.append("followed by the square to move a piece into.");
+		sb.append(" Example:<ul><li>move: e2 e3</li></ul>");
+		sb.append("</div>\n");
+
+		sb.append("<div>");
+		sb.append("When moving a <strong>pawn for promotion</strong> reply with 'MOVE: '");
+		sb.append("followed by the square to move a piece from ");
+		sb.append("followed by the square to move a piece into ");
+		sb.append("followed by the name of the piece to promote the pawn to ");
+		sb.append("(queen, knight, rook, or bishop).");
+		sb.append(" Example:<ul><li>move: b2 b1 knight</li></ul>");
+		sb.append("</div>\n");
+
+		sb.append("<div>");
+		sb.append("To perform an <strong>en passant</strong> reply with 'MOVE: square from square to en passant'.");
+		sb.append(" Example:<ul><li>move: e5 f6 en passant</li></ul>");
+		sb.append("</div>\n");
+
+		sb.append("<div>");
+		sb.append("To <strong>request a draw</strong> reply with 'MOVE: draw?'.");
+		sb.append("</div>\n");
+
+		sb.append("<div>");
+		sb.append("To <strong>concede</strong> reply with 'MOVE: resign'.");
+		sb.append("</div>\n");
+
+		sb.append("<div>");
+		sb.append(
+				"Any reply that does not start with 'MOVE: ' on the first line will be ignored so that normal commenting and replying can occur on the turn's post.");
+		sb.append("</div>\n");
+
+		sb.append("<div>");
+		sb.append(
+				"If you don't make a move within 6 days you will automatically be considered as conceding victory in your match.");
+		sb.append("</div>\n");
+
+		return sb;
 	}
 
 	private List<PlayerMatch> getRandomMatches(Set<PlayerChallenge> newPlayers, List<PlayerMatch> excluding) {
 		List<PlayerChallenge> playerList = new ArrayList<>(newPlayers);
-		
+
 		List<PlayerMatch> matches = new ArrayList<>();
 		Set<Permlink> alreadyPermlink = new HashSet<>();
 		Set<String> already = new HashSet<>();
-		
-		for (PlayerMatch match: excluding) {
+
+		for (PlayerMatch match : excluding) {
 			alreadyPermlink.add(match.getPlayer1().getPermlink());
 			alreadyPermlink.add(match.getPlayer2().getPermlink());
 		}
-		
-		playerList.removeIf(p->p.getChallenged()!=null);
-		playerList.removeIf(p->alreadyPermlink.contains(p.getPermlink()));
-		
+
+		playerList.removeIf(p -> p.getChallenged() != null);
+		playerList.removeIf(p -> alreadyPermlink.contains(p.getPermlink()));
+
 		Collections.shuffle(playerList);
 		ListIterator<PlayerChallenge> iPlayers = playerList.listIterator();
 		while (iPlayers.hasNext()) {
@@ -279,7 +470,7 @@ public class Main extends AbstractApp {
 			match.setPlayer1(player1);
 			match.setPlayer2(player2);
 			if (already.contains(match.getSemaphore())) {
-				//go back one so that player2 becomes player1 for next in list
+				// go back one so that player2 becomes player1 for next in list
 				iPlayers.previous();
 				continue;
 			}
@@ -287,7 +478,7 @@ public class Main extends AbstractApp {
 			already.add(match.getSemaphore());
 			already.add(match.getInverseSemaphore());
 		}
-		
+
 		return matches;
 	}
 
@@ -340,14 +531,14 @@ public class Main extends AbstractApp {
 		}
 	}
 
-	private Set<String> getListOfActiveGames() {
+	private Set<String> getListOfActiveMatches() {
 		return new HashSet<>();
 	}
 
 	private void doRunGameTurns() throws JsonParseException, JsonMappingException, IOException,
 			SteemCommunicationException, SteemResponseException {
 		Set<String> already = new HashSet<>();
-		List<CommentBlogEntry> entries = steemJ.getBlog(botAccount, 0, (short) 100);
+		List<CommentBlogEntry> entries = getCachedBlogEntries();
 		gameScan: for (CommentBlogEntry entry : entries) {
 			// if not by game master, SKIP
 			if (entry.getComment() == null) {
@@ -388,11 +579,20 @@ public class Main extends AbstractApp {
 			if (gameId == null) {
 				continue gameScan;
 			}
-			if (metadata.getGameData() == null) {
+			if (metadata.getChessGameData() == null) {
 				System.err.println("No chess game data: " + permlink.getLink());
 				continue gameScan;
 			}
 		}
+	}
+
+	private List<CommentBlogEntry> cachedBlogEntries = null;
+
+	private List<CommentBlogEntry> getCachedBlogEntries() throws SteemCommunicationException, SteemResponseException {
+		if (cachedBlogEntries == null) {
+			cachedBlogEntries = steemJ.getBlog(botAccount, 0, (short) 200);
+		}
+		return new ArrayList<>(cachedBlogEntries);
 	}
 
 	/**
@@ -664,7 +864,7 @@ public class Main extends AbstractApp {
 
 	private boolean isNeedAnnounceNewGamePost() throws SteemCommunicationException, SteemResponseException,
 			JsonParseException, JsonMappingException, IOException {
-		List<CommentBlogEntry> entries = steemJ.getBlog(botAccount, 0, (short) 100);
+		List<CommentBlogEntry> entries = getCachedBlogEntries();
 		Date mostRecent = new Date(0);
 		gameScan: for (CommentBlogEntry entry : entries) {
 			// if not by game master, SKIP
@@ -702,7 +902,7 @@ public class Main extends AbstractApp {
 
 	private Set<PlayerChallenge> newPlayersWantingToPlay() throws SteemCommunicationException, SteemResponseException,
 			JsonParseException, JsonMappingException, IOException {
-		List<CommentBlogEntry> entries = steemJ.getBlog(botAccount, 0, (short) 100);
+		List<CommentBlogEntry> entries = getCachedBlogEntries();
 		Date oldestThreshold = DateUtils.addDays(new Date(), -15);
 		Set<PlayerChallenge> pairings = new HashSet<>();
 		gameScan: for (CommentBlogEntry entry : entries) {
@@ -757,6 +957,9 @@ public class Main extends AbstractApp {
 					botReply = botReply.replaceAll("</?[^>]*?>", " ");
 					botReply = StringUtils.normalizeSpace(botReply).trim();
 					if (botReply.startsWith("game started")) {
+						continue replies;
+					}
+					if (botReply.startsWith("match started")) {
 						continue replies;
 					}
 					if (botReply.startsWith("rejected")) {

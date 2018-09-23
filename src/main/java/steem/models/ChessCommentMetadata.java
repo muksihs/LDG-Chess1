@@ -1,41 +1,9 @@
 package steem.models;
 
-import java.util.List;
-
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class ChessCommentMetadata {
-	public static class ChessData {
-		private String fen;
-		private List<String> moveHistory;
-		public String getFen() {
-			return fen;
-		}
-		public void setFen(String fen) {
-			this.fen = fen;
-		}
-		public List<String> getMoveHistory() {
-			return moveHistory;
-		}
-		public void setMoveHistory(List<String> moveHistory) {
-			this.moveHistory = moveHistory;
-		}
-		public String getPlayerWhite() {
-			return playerWhite;
-		}
-		public void setPlayerWhite(String playerWhite) {
-			this.playerWhite = playerWhite;
-		}
-		public String getPlayerBlack() {
-			return playerBlack;
-		}
-		public void setPlayerBlack(String playerBlack) {
-			this.playerBlack = playerBlack;
-		}
-		private String playerWhite;
-		private String playerBlack;
-	}
 	private String app;
 	private String canonical;
 	private String format;
@@ -45,7 +13,7 @@ public class ChessCommentMetadata {
 	private String[] tags;
 	private String[] users;
 	private String community;
-	private ChessData gameData;
+	private ChessGameData chessGameData;
 
 	public String getApp() {
 		return app;
@@ -119,11 +87,11 @@ public class ChessCommentMetadata {
 		this.community = community;
 	}
 
-	public ChessData getGameData() {
-		return gameData;
+	public ChessGameData getChessGameData() {
+		return chessGameData;
 	}
 
-	public void setGameData(ChessData gameData) {
-		this.gameData = gameData;
+	public void setChessGameData(ChessGameData chessGameData) {
+		this.chessGameData = chessGameData;
 	}
 }
