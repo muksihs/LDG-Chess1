@@ -729,6 +729,15 @@ public class Main extends AbstractApp {
 					if (promotion.startsWith("bishop")) {
 						promotion = "BISHOP";
 					}
+					switch (promotion) {
+					case "QUEEN":
+					case "KNIGHT":
+					case "ROOK":
+					case "BISHIP":
+						break;
+					default:
+						promotion = "";
+					}
 					theMove = s1 + s2 + promotion;
 					if (!processActiveGameMove(activeGame, playerReply, theMove, responses)) {
 						iActiveGames.remove();
