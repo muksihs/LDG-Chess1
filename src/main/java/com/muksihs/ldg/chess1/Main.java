@@ -379,21 +379,21 @@ public class Main extends AbstractApp {
 		sb.append("<hr/>\n");
 		sb.append(getInstructionsHtml());
 		sb.append("<hr/>\n");
-		
+
 		sb.append("<p><center>");
 		sb.append("Images created with");
 		sb.append(" <a target='_blank' href='http://www.fen-to-image.com/'>");
 		sb.append("http://www.fen-to-image.com/");
 		sb.append("</a>");
 		sb.append("</center></p>");
-		
+
 		sb.append("<p><center>");
 		sb.append("Github: ");
 		sb.append(" <a target='_blank' href='https://github.com/muksihs/LDG-Chess1'>");
 		sb.append("LDG-Chess1");
 		sb.append("</a>");
 		sb.append("</center></p>");
-		
+
 		sb.append("<p>FEN: ");
 		sb.append(cgd.getFen());
 		sb.append("</p>\n");
@@ -539,25 +539,26 @@ public class Main extends AbstractApp {
 			}
 		}
 	}
-	
+
 	private void doPlayerResponses(Collection<MoveResponse> responses) {
 		for (MoveResponse response : responses) {
 			retries: for (int retries = 0; retries < 10; retries++) {
 				try {
-					String[] tags=null;
+					String[] tags = null;
 					Discussion content = steemJ.getContent(response.getPlayer(), response.getPermlink());
 					if (content != null) {
 						try {
-							ChessCommentMetadata ccm = json.readValue(content.getJsonMetadata(), ChessCommentMetadata.class);
+							ChessCommentMetadata ccm = json.readValue(content.getJsonMetadata(),
+									ChessCommentMetadata.class);
 							tags = ccm.getTags();
 						} catch (IOException e) {
 						}
 					}
-					
-					if (tags==null || tags.length==0) {
-						tags = new String[] {"chess"};
+
+					if (tags == null || tags.length == 0) {
+						tags = new String[] { "chess" };
 					}
-					System.out.println("Response: @"+response.getPlayer().getName()+" => "+response.getReason());
+					System.out.println("Response: @" + response.getPlayer().getName() + " => " + response.getReason());
 					waitCheckBeforeReplying(steemJ);
 					steemJ.createComment(response.getPlayer(), //
 							response.getPermlink(), //
@@ -588,9 +589,9 @@ public class Main extends AbstractApp {
 		return semaphores;
 	}
 
-	private void doRunGameTurns()
-			throws JsonParseException, JsonMappingException, IOException, SteemCommunicationException,
-			SteemResponseException, MoveException, MoveGeneratorException, MoveConversionException, SteemInvalidTransactionException {
+	private void doRunGameTurns() throws JsonParseException, JsonMappingException, IOException,
+			SteemCommunicationException, SteemResponseException, MoveException, MoveGeneratorException,
+			MoveConversionException, SteemInvalidTransactionException {
 		Map<Permlink, ChessGameData> activeGames = getActiveGames();
 		System.out.println("=== " + NF.format(activeGames.size()) + " active games.");
 		Set<Permlink> activeGamesKeySet = activeGames.keySet();
@@ -616,13 +617,14 @@ public class Main extends AbstractApp {
 			playerReplies: for (Discussion playerReply : replies) {
 				String[] tags;
 				try {
-					ChessCommentMetadata ccm = json.readValue(playerReply.getJsonMetadata(), ChessCommentMetadata.class);
+					ChessCommentMetadata ccm = json.readValue(playerReply.getJsonMetadata(),
+							ChessCommentMetadata.class);
 					tags = ccm.getTags();
 				} catch (Exception e1) {
 					tags = null;
 				}
-				if (tags == null || tags.length==0) {
-					tags = new String[] {"chess"};
+				if (tags == null || tags.length == 0) {
+					tags = new String[] { "chess" };
 				}
 				if (!playerToMove.equals(playerReply.getAuthor())) {
 					System.out.println(" -- Skipping reply by: " + playerReply.getAuthor().getName());
@@ -784,13 +786,13 @@ public class Main extends AbstractApp {
 					case "KNIGHT":
 					case "ROOK":
 					case "BISHIP":
-						System.out.println("Promotion: "+promotion);
+						System.out.println("Promotion: " + promotion);
 						break;
 					default:
 						promotion = "";
 					}
 					theMove = s1 + s2 + promotion;
-					System.out.println("Move: "+theMove);
+					System.out.println("Move: " + theMove);
 					if (!processActiveGameMove(activeGame, playerReply, theMove, responses)) {
 						iActiveGames.remove();
 					}
@@ -1394,23 +1396,14 @@ public class Main extends AbstractApp {
 		gameInvite.append(" to accept your challenge.</li>\n");
 		gameInvite.append("<li>Reply to this post with just `play` to join a random chess game.</li>\n");
 		gameInvite.append("</ul>\n");
-		gameInvite.append("<h3>ONLY FOR BETA TESTERS WHO DON" + RSQUO + "T MIND THINGS BREAKING!</h3>\n");
-		gameInvite.append("<h4>More about Leather Dog Chess</h4>\n");
-		gameInvite.append("<p>The first game will commence shortly");
-		gameInvite.append(" after ");
-		gameInvite.append(" there are at least two players registered.</p>\n");
-		gameInvite.append("<p>Players will be assigned randomly.</p>\n");
 		gameInvite.append("<p>Initiative will be assigned randomly.</p>\n");
 		gameInvite.append("<p>This is <strong>NOT</strong> speed chess.");
 		gameInvite.append(" The bot will not process orders more than a few times a day!</p>\n");
-		gameInvite.append("<p>The game bot uses the same coordinate system as " + LDQUO
-				+ "<a href='https://en.wikipedia.org/wiki/Algebraic_notation_(chess)'>");
-		gameInvite.append("Algebraic notation (or AN)</a> for describing the moves in a game.</p>\n");
-		gameInvite.append(
-				"<p>Unlike full AN instead you reply with [FROM] [TO] for a move. And [FROM] [TO] [PROMOTE] for pawn promotions.</p>\n");
-		gameInvite.append("<p>Better examples will be provided later.</p>\n");
-		gameInvite.append(
-				"<center><h4><a href='https://github.com/muksihs/LDG-Chess1'>https://github.com/muksihs/LDG-Chess1</a></h4></center>\n");
+		gameInvite.append("<center><h4>");
+		gameInvite.append("<a href='https://github.com/muksihs/LDG-Chess1'>");
+		gameInvite.append("https://github.com/muksihs/LDG-Chess1");
+		gameInvite.append("</a>");
+		gameInvite.append("</h4></center>\n");
 		gameInvite.append("</html>\n");
 
 		String gameId = String.valueOf(System.currentTimeMillis() / 1000l / 60l / 5l);
