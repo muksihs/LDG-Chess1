@@ -93,6 +93,8 @@ public class Main extends AbstractApp {
 
 	public Main(Config config, String[] args) throws MoveGeneratorException {
 		super(config, args);
+		config.setAutoExit(true);
+		config.setAutoExitOnError(true);
 		board = new Board(new GameContext(), true);
 		initJackson();
 	}
