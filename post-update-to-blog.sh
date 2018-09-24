@@ -34,7 +34,7 @@ sed -i 's/>/\&gt;/g' "$msgfile"
 sed -i 's/\t/    /g' "$msgfile"
 sed -i 's|  |\&nbsp; |g' "$msgfile"
 java -jar ~/git/SteemCliPoster/build/libs/SteemCliPoster.jar \
-	--auth-file ~/.steem/steem.properties \
+	--auth-file ~/.steem/far-horizons.properties \
 	--no-escape \
 	--file "$msgfile"
 cp tmp/log.new tmp/log.old
