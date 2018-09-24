@@ -1,4 +1,4 @@
-package com.muksihs.ldg.chess1;
+package com.muksihs.ldg.chess1.models;
 
 import eu.bittrade.libs.steemj.base.models.AccountName;
 import eu.bittrade.libs.steemj.base.models.Permlink;

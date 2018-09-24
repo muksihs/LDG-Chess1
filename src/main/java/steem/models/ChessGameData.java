@@ -3,11 +3,28 @@ package steem.models;
 import java.util.List;
 
 public class ChessGameData {
+	private String startDate;
+	private boolean resigned;
+	private String resignedBy;
 	private boolean draw;
 	private String fen;
 	private String gameId;
 	private boolean mated;
 	private List<String> moveList;
+	private String san;
+	private String fan;
+	public String getSan() {
+		return san;
+	}
+	public void setSan(String san) {
+		this.san = san;
+	}
+	public String getFan() {
+		return fan;
+	}
+	public void setFan(String fan) {
+		this.fan = fan;
+	}
 	private String pgn;
 	private String playerBlack;
 	private String playerToMove;
@@ -86,5 +103,23 @@ public class ChessGameData {
 	}
 	public void setPlayerToMove(String playerToMove) {
 		this.playerToMove = playerToMove;
+	}
+	public boolean isResigned() {
+		return resigned;
+	}
+	public void setResigned(boolean resigned) {
+		this.resigned = resigned;
+	}
+	public String getResignedBy() {
+		return resignedBy;
+	}
+	public void setResignedBy(String resignedBy) {
+		this.resignedBy = resignedBy;
+	}
+	public String getStartDate() {
+		return startDate;
+	}
+	public void setStartDate(String startDate) {
+		this.startDate = startDate;
 	}
 }

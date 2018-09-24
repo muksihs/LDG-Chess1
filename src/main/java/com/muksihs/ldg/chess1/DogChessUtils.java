@@ -17,8 +17,8 @@ public class DogChessUtils {
 	public static String blackKnight = "\u265e";
 	public static String blackPawn = "\u265f";
 
-	private static final String URL_FEN2IMAGE = "http://www.fen-to-image.com/image/128/double/coords/_FEN_";
-	private static final String URL_FEN2IMAGE_ROTATED = "http://www.fen-to-image.com/image/128/double/_FEN_";
+	private static final String URL_FEN2IMAGE = "http://www.fen-to-image.com/image/128/double/coords/_FEN_?chessboard.png";
+	private static final String URL_FEN2IMAGE_ROTATED = "http://www.fen-to-image.com/image/128/double/_FEN_?chessboard-rotated.png";
 
 	public static String getChessboardRotatedImageMarkdown(String fen) {
 		return "![CHESS BOARD ROTATED]("+getChessboardUrlRotated(fen)+")";

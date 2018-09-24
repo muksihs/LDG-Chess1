@@ -1,6 +1,4 @@
-package com.muksihs.ldg.chess1;
-
-import com.muksihs.ldg.chess1.models.PlayerChallenge;
+package com.muksihs.ldg.chess1.models;
 
 public class PlayerMatch {
 	private PlayerChallenge player1;

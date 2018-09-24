@@ -34,7 +34,6 @@ import com.cherokeelessons.gui.AbstractApp;
 import com.cherokeelessons.gui.MainWindow;
 import com.cherokeelessons.gui.MainWindow.Config;
 import com.fasterxml.jackson.core.JsonParseException;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -56,8 +55,11 @@ import com.github.bhlangonijr.chesslib.move.MoveException;
 import com.github.bhlangonijr.chesslib.move.MoveGenerator;
 import com.github.bhlangonijr.chesslib.move.MoveGeneratorException;
 import com.github.bhlangonijr.chesslib.move.MoveList;
+import com.muksihs.ldg.chess1.models.MoveResponse;
 import com.muksihs.ldg.chess1.models.NewGameInviteInfo;
 import com.muksihs.ldg.chess1.models.PlayerChallenge;
+import com.muksihs.ldg.chess1.models.PlayerMatch;
+import com.muksihs.ldg.chess1.models.SignupReject;
 import com.muksihs.ldg.chess1.models.SteemAccountInformation;
 
 import eu.bittrade.libs.steemj.SteemJ;
@@ -162,7 +164,7 @@ public class Main extends AbstractApp {
 		doAnnounceGamePost();
 		doRunGameTurns();
 		doStartNewMatches();
-		
+
 	}
 
 	private void doStartNewMatches()
@@ -234,7 +236,6 @@ public class Main extends AbstractApp {
 			}
 			notifyPlayersOfGameStart(match, permlink);
 		}
-
 	}
 
 	private void notifyPlayersOfGameStart(PlayerMatch match, Permlink permlink) {
@@ -313,14 +314,6 @@ public class Main extends AbstractApp {
 					+ " - " + board.getSideToMove() + LSQUO + "s MOVE [" + gameId + "]");
 
 			System.out.println("=== " + gameTitle);
-			System.out.println("--- Game id: " + gameId);
-			System.out.println(game.getResult().getDescription());
-			System.out.println("FEN: " + board.getFen(true));
-			System.out.println("Draw: " + board.isDraw());
-			System.out.println("Mated: " + board.isMated());
-			System.out.println("Stalemate: " + board.isStaleMate());
-			System.out.println("Side to move: " + board.getSideToMove().name());
-			System.out.println("PGN:\n" + game.toPgn(true, true));
 
 			ChessGameData cgd = new ChessGameData();
 			cgd.setDraw(board.isDraw());
@@ -347,14 +340,6 @@ public class Main extends AbstractApp {
 			tags.add(gameId);
 
 			String turnHtml = generateTurnHtml(cgd);
-
-			System.out.println(gameTitle.toString());
-			System.out.println(turnHtml);
-			try {
-				System.out.println(json.writeValueAsString(cgd));
-			} catch (JsonProcessingException e1) {
-			}
-			System.out.println("---");
 
 			retries: for (int retries = 0; retries < 10; retries++) {
 				try {
@@ -391,11 +376,19 @@ public class Main extends AbstractApp {
 		sb.append("<p><center>\n");
 		sb.append(DogChessUtils.getChessboardRotatedImageHtml(cgd.getFen()));
 		sb.append("\n</center></p>\n");
-		sb.append("<p>FEN: ");
-		sb.append(board.getFen(true));
-		sb.append("</p>\n");
+		sb.append("<hr/>\n");
 		sb.append(getInstructionsHtml());
-		sb.append("\n</html>\n");
+		sb.append("<hr/>\n");
+		sb.append("<p>FEN: ");
+		sb.append(cgd.getFen());
+		sb.append("</p>\n");
+		sb.append("<p>FAN: ");
+		sb.append(cgd.getFan());
+		sb.append("</p>\n");
+		sb.append("<p>SAN: ");
+		sb.append(cgd.getSan());
+		sb.append("</p>\n");
+		sb.append("</html>\n");
 		return sb.toString();
 	}
 
@@ -417,10 +410,10 @@ public class Main extends AbstractApp {
 		sb.append(" Example:<ul><li>move: b2 b1 knight</li></ul>");
 		sb.append("</div>\n");
 
-		sb.append("<div>");
-		sb.append("To perform an <strong>en passant</strong> reply with 'MOVE: square from square to en passant'.");
-		sb.append(" Example:<ul><li>move: e5 f6 en passant</li></ul>");
-		sb.append("</div>\n");
+//		sb.append("<div>");
+//		sb.append("To perform an <strong>en passant</strong> reply with 'MOVE: square from square to en passant'.");
+//		sb.append(" Example:<ul><li>move: e5 f6 en passant</li></ul>");
+//		sb.append("</div>\n");
 
 		sb.append("<div>");
 		sb.append("To <strong>request a draw</strong> reply with 'MOVE: draw?'.");
@@ -518,7 +511,7 @@ public class Main extends AbstractApp {
 			retries: for (int retries = 0; retries < 10; retries++) {
 				try {
 					System.out.println(" Reject: " + reject.getChallenger().getName() + " "
-							+ reject.getReason().replaceAll("<[^>]*?>", " "));
+							+ getParsableBodyText(reject.getReason()));
 					waitCheckBeforeReplying(steemJ);
 					steemJ.createComment(reject.getChallenger(), //
 							reject.getPermlink(), //
@@ -531,12 +524,329 @@ public class Main extends AbstractApp {
 		}
 	}
 
-	private Set<String> getListOfActiveMatches() {
-		return new HashSet<>();
+	private Set<String> getListOfActiveMatches() throws SteemCommunicationException, SteemResponseException,
+			JsonParseException, JsonMappingException, IOException {
+		Map<Permlink, ChessGameData> activeGames = getActiveGames();
+		Set<String> semaphores = new HashSet<>();
+		for (ChessGameData activeGame : activeGames.values()) {
+			PlayerMatch match = new PlayerMatch();
+			PlayerChallenge player1 = new PlayerChallenge();
+			PlayerChallenge player2 = new PlayerChallenge();
+			player1.setChallenger(new AccountName(activeGame.getPlayerWhite().substring(1)));
+			player2.setChallenger(new AccountName(activeGame.getPlayerBlack().substring(1)));
+			match.setPlayer1(player1);
+			match.setPlayer2(player2);
+			semaphores.add(match.getSemaphore());
+			semaphores.add(match.getInverseSemaphore());
+		}
+		return semaphores;
 	}
 
 	private void doRunGameTurns() throws JsonParseException, JsonMappingException, IOException,
-			SteemCommunicationException, SteemResponseException {
+			SteemCommunicationException, SteemResponseException, MoveException, MoveGeneratorException, MoveConversionException {
+		Map<Permlink, ChessGameData> activeGames = getActiveGames();
+		System.out.println("=== " + NF.format(activeGames.size()) + " active games.");
+		Set<Permlink> activeGamesKeySet = activeGames.keySet();
+		Iterator<Permlink> iActiveGames = activeGamesKeySet.iterator();
+		List<MoveResponse> responses = new ArrayList<>();
+		activeGames: while (iActiveGames.hasNext()) {
+			Permlink permlink = iActiveGames.next();
+			ChessGameData activeGame = activeGames.get(permlink);
+			AccountName playerToMove = new AccountName(activeGame.getPlayerToMove().substring(1));
+			AccountName playerWhite = new AccountName(activeGame.getPlayerWhite().substring(1));
+			AccountName playerBlack = new AccountName(activeGame.getPlayerBlack().substring(1));
+			AccountName otherPlayer;
+			if (playerToMove.equals(playerWhite)) {
+				otherPlayer = playerBlack;
+			} else {
+				otherPlayer = playerWhite;
+			}
+			List<Discussion> replies = steemJ.getContentReplies(botAccount, permlink);
+			if (replies == null) {
+				continue activeGames;
+			}
+			String theMove;
+			playerReplies: for (Discussion playerReply : replies) {
+				if (!playerToMove.equals(playerReply.getAuthor())) {
+					System.out.println(" -- Skipping reply by: " + playerReply.getAuthor().getName());
+					continue playerReplies;
+				}
+				// make sure this hasn't been replied to by the bot with a 'reject'
+				Permlink playerReplyPermlink = playerReply.getPermlink();
+				List<Discussion> botReplies = steemJ.getContentReplies(playerReply.getAuthor(), playerReplyPermlink);
+				if (botReplies != null) {
+					botReplies: for (Discussion botReply : botReplies) {
+						if (!botReply.getAuthor().equals(botAccount)) {
+							continue botReplies;
+						}
+						String botReplyBody = getParsableBodyText(botReply.getBody());
+						if (botReplyBody.startsWith("reject")) {
+							System.out.println(
+									" -- Skipping previously rejected move: " + playerReply.getAuthor().getName());
+							continue playerReplies;
+						}
+						if (botReplyBody.startsWith("confirm draw")) {
+							List<Discussion> drawReplies = steemJ.getContentReplies(botAccount, botReply.getPermlink());
+							if (drawReplies == null) {
+								// skip to next game
+								continue activeGames;
+							}
+							otherPlayerReplies: for (Discussion otherPlayerReply : drawReplies) {
+								if (!otherPlayerReply.getAuthor().equals(otherPlayer)) {
+									continue otherPlayerReplies;
+								}
+								String drawBody = getParsableBodyText(otherPlayerReply.getBody());
+								if (drawBody.startsWith("confirm draw") || drawBody.startsWith("move confirm draw")) {
+									activeGame.setDraw(true);
+									continue activeGames;
+								}
+								if (drawBody.startsWith("reject draw") || drawBody.startsWith("move reject draw")) {
+									MoveResponse response = new MoveResponse();
+									response.setPermlink(playerReply.getPermlink());
+									response.setPlayer(playerReply.getAuthor());
+									response.setReason("<html><h4>REJECTED<h4><h5>@" + otherPlayer.getName()
+											+ " does not want to declare a draw.</h5></html>\n");
+									responses.add(response);
+									iActiveGames.remove();
+									continue activeGames;
+								}
+							}
+						}
+					}
+				}
+
+				String move = getParsableBodyText(playerReply.getBody());
+				String[] moveParts = move.trim().split("\\s");
+				if (moveParts == null) {
+					System.out.println(" -- Skipping unparsable reply body: " + playerReply.getAuthor().getName());
+					continue playerReplies;
+				}
+				ListIterator<String> iMove = Arrays.asList(moveParts).listIterator();
+				if (!iMove.hasNext()) {
+					System.out.println(" -- Skipping empty reply body: " + playerReply.getAuthor().getName());
+					continue playerReplies;
+				}
+				iMove: while (iMove.hasNext()) {
+					String next = iMove.next();
+					if (next.startsWith("draw")) {
+						MoveResponse response = new MoveResponse();
+						response.setPermlink(playerReplyPermlink);
+						response.setPlayer(playerReply.getAuthor());
+						response.setReason("<html><h4>CONFIRM DRAW</h4><h5>@" //
+								+ otherPlayer.getName() //
+								+ " to declare a draw respond with: confirm draw<br/>" //
+								+ "To reject the draw request respond with:" //
+								+ " reject draw</h5>" //
+								+ "If you don't respond in 6 days you will be resigned" //
+								+ " from the game." //
+								+ "</html>\n");
+						responses.add(response);
+						iActiveGames.remove();
+						continue activeGames;
+					}
+					if (next.startsWith("resign") || next.startsWith("concede")) {
+						activeGame.setResigned(true);
+						activeGame.setResignedBy(playerToMove.getName());
+						continue activeGames;
+					}
+					if (!next.startsWith("move")) {
+						System.out.println(" -- Skipping not a move reply body: " + playerReply.getAuthor().getName());
+						System.out.println(" -- " + playerReply.getBody());
+						continue playerReplies;
+					}
+					if (!iMove.hasNext()) {
+						MoveResponse response = new MoveResponse();
+						response.setPermlink(playerReplyPermlink);
+						response.setPlayer(playerReply.getAuthor());
+						response.setReason("REJECTED\nNo squares specified.");
+						continue playerReplies;
+					}
+					String s1 = iMove.next();
+					if (!iMove.hasNext() && s1.length()<4) {
+						MoveResponse response = new MoveResponse();
+						response.setPermlink(playerReplyPermlink);
+						response.setPlayer(playerReply.getAuthor());
+						response.setReason("REJECTED\nNo destination square specified.");
+						continue playerReplies;
+					}
+					String s2;
+					if (s1.length()>=4) {
+						s2 = s1.substring(2);
+						s1 = s1.substring(0, 2);
+					} else {
+						s2 = iMove.next();
+					}
+					String promotion="";
+					if (s2.length()>2) {
+						promotion=s2.substring(2);
+						s2=s2.substring(0, 2);
+					}
+					Square square1;
+					try {
+						square1 = Square.valueOf(s1.toUpperCase());
+					} catch (Exception e) {
+						MoveResponse response = new MoveResponse();
+						response.setPermlink(playerReplyPermlink);
+						response.setPlayer(playerReply.getAuthor());
+						response.setReason(
+								"REJECTED\nSource square not understood.\nMust be from a1 to h8. Do not specify extra information such as the piece.\n");
+						continue playerReplies;
+					}
+					Square square2;
+					try {
+						square2 = Square.valueOf(s2.toUpperCase());
+					} catch (Exception e) {
+						MoveResponse response = new MoveResponse();
+						response.setPermlink(playerReplyPermlink);
+						response.setPlayer(playerReply.getAuthor());
+						response.setReason(
+								"REJECTED\nDestination square not understood.\nMust be from a1 to h8. Do not specify extra information such as the piece.\n");
+						continue playerReplies;
+					}
+					
+					if (!StringUtils.isBlank(promotion)&&iMove.hasNext()) {
+						promotion=iMove.next();
+						}
+					if (promotion.startsWith("queen")) {
+						promotion = "QUEEN";
+					}
+					if (promotion.startsWith("knight")) {
+						promotion = "KNIGHT";
+					}
+					if (promotion.startsWith("rook")) {
+						promotion = "ROOK";
+					}
+					if (promotion.startsWith("bishop")) {
+						promotion = "BISHOP";
+					}
+					theMove = s1+s2+promotion;
+					if (!processActiveGameMove(activeGame, playerReply, theMove, responses)) {
+						iActiveGames.remove();
+					} 
+					continue activeGames;
+				}
+			}
+		}
+	}
+
+	//TODO
+	private boolean processActiveGameMove(ChessGameData activeGame, Discussion playerReply, String theMove, 
+			List<MoveResponse> responses) throws MoveException, MoveGeneratorException, MoveConversionException {
+		Board board = new Board();
+		try {
+			board.getContext().setVariationType(VariationType.valueOf(activeGame.getVariationType()));
+		} catch (Exception e) {
+			board.getContext().setVariationType(VariationType.NORMAL);
+		}
+
+		Player whitePlayer = GameFactory.newPlayer(PlayerType.HUMAN, activeGame.getPlayerWhite());
+		Player blackPlayer = GameFactory.newPlayer(PlayerType.HUMAN, activeGame.getPlayerBlack());
+		
+		Event newGame = GameFactory.newEvent("Leather Dog Chess 1");
+		newGame.setEndDate("");
+		newGame.setSite("https://busy.org/@leatherdog-games");
+		String startDate = activeGame.getStartDate()==null?new java.sql.Date(System.currentTimeMillis()).toString():activeGame.getStartDate();
+		newGame.setStartDate(startDate);
+
+		Round startingRound = GameFactory.newRound(newGame, 0);
+
+		Game game = GameFactory.newGame("", startingRound);
+		game.setBoard(board);
+		game.setDate(startDate);
+		game.setResult(GameResult.ONGOING);
+		game.setVariation(board.getContext().getVariationType().name());
+		
+		String gameId = activeGame.getGameId();
+		game.setGameId(gameId);
+		game.setMoveText(new StringBuilder());
+
+		game.setWhitePlayer(whitePlayer);
+		game.setBlackPlayer(blackPlayer);
+		
+		MoveList ml = new MoveList();
+		if (!StringUtils.isBlank(activeGame.getSan())) {
+			ml.loadFromSan(activeGame.getSan());
+		}
+		
+		game.setHalfMoves(ml);
+		game.gotoLast();
+		
+		MoveList legal = MoveGenerator.generateLegalMoves(board);
+		
+		Move move = new Move(theMove, board.getSideToMove());
+		
+		if (!legal.contains(move)) {
+			MoveResponse response = new MoveResponse();
+			response.setPermlink(playerReply.getPermlink());
+			response.setPlayer(playerReply.getAuthor());
+			response.setReason("REJECTED\nNot a valid move.");
+			responses.add(response);
+			return false;
+		}
+		
+		ml.add(move);
+		game.setHalfMoves(ml);
+		game.gotoLast();
+		
+		StringBuilder gameTitle = new StringBuilder();
+		gameTitle.append("Chess " + whitePlayer + " vs " + blackPlayer + " - Round " + (1 + ml.size()/2)
+				+ " - " + board.getSideToMove() + LSQUO + "s MOVE [" + gameId + "]");
+
+		System.out.println("=== " + gameTitle);
+
+		ChessGameData cgd = activeGame;
+		cgd.setDraw(board.isDraw());
+		cgd.setFen(board.getFen(true));
+		cgd.setGameId(gameId);
+		cgd.setMated(board.isMated());
+		cgd.getMoveList().add(theMove);
+		cgd.setPgn(game.toPgn(true, true));
+		cgd.setPlayerBlack(blackPlayer.getName());
+		cgd.setPlayerWhite(whitePlayer.getName());
+		cgd.setSideToMove(board.getSideToMove().name());
+		cgd.setPlayerToMove(board.getSideToMove().equals(Side.WHITE) ? whitePlayer.getName() : blackPlayer.getName());
+		cgd.setStalemate(board.isStaleMate());
+		cgd.setVariationType(board.getContext().getVariationType().name());
+		
+		cgd.setFan(game.getHalfMoves().toFan());
+		cgd.setSan(game.getHalfMoves().toSan());
+		
+		Map<String, Object> metadata = getAppMetadata();
+		metadata.put("chessGameData", cgd);
+
+		List<String> tags = new ArrayList<>();
+		tags.add("chess");
+		tags.add("steemchess");
+		tags.add("chess-match");
+		tags.add("gaming");
+		tags.add(gameId);
+
+		String turnHtml = generateTurnHtml(cgd);
+		
+		retries: for (int retries = 0; retries < 10; retries++) {
+			try {
+				waitCheckBeforePosting(steemJ);
+				CommentOperation info = steemJ.createPost(gameTitle.toString(), turnHtml,
+						tags.toArray(new String[0]), MIME_HTML, metadata);
+//				gameLinks.put(match.getSemaphore(), info.getPermlink());
+				break;
+			} catch (SteemCommunicationException | SteemResponseException | SteemInvalidTransactionException e) {
+				continue retries;
+			}
+		}
+		
+		
+		return true;
+	}
+
+	private String getParsableBodyText(String bodyText) {
+		return StringUtils.normalizeSpace(bodyText.replaceAll("<[^>]*?>", " ").replace(":", " ").toLowerCase().trim());
+	}
+
+	private Map<Permlink, ChessGameData> getActiveGames() throws SteemCommunicationException, SteemResponseException,
+			IOException, JsonParseException, JsonMappingException {
+		Map<Permlink, ChessGameData> activeGames = new HashMap<>();
+
 		Set<String> already = new HashSet<>();
 		List<CommentBlogEntry> entries = getCachedBlogEntries();
 		gameScan: for (CommentBlogEntry entry : entries) {
@@ -583,7 +893,9 @@ public class Main extends AbstractApp {
 				System.err.println("No chess game data: " + permlink.getLink());
 				continue gameScan;
 			}
+			activeGames.put(permlink, metadata.getChessGameData());
 		}
+		return activeGames;
 	}
 
 	private List<CommentBlogEntry> cachedBlogEntries = null;
@@ -938,14 +1250,11 @@ public class Main extends AbstractApp {
 			}
 			replies: for (Discussion reply : replies) {
 				AccountName challenger = reply.getAuthor();
-				String replyBody = reply.getBody();
 				List<Discussion> botReplies = steemJ.getContentReplies(reply.getAuthor(), reply.getPermlink());
 				if (botReplies == null) {
 					continue;
 				}
-				replyBody = replyBody.toLowerCase();
-				replyBody = replyBody.replaceAll("</?[^>]*?>", " ");
-				replyBody = StringUtils.normalizeSpace(replyBody).trim();
+				String replyBody = getParsableBodyText(reply.getBody());
 				if (!replyBody.startsWith("play")) {
 					continue replies;
 				}
@@ -953,9 +1262,7 @@ public class Main extends AbstractApp {
 					if (!botAccount.equals(maybeBotReply.getAuthor())) {
 						continue maybeBotReplies;
 					}
-					String botReply = maybeBotReply.getBody().toLowerCase();
-					botReply = botReply.replaceAll("</?[^>]*?>", " ");
-					botReply = StringUtils.normalizeSpace(botReply).trim();
+					String botReply = getParsableBodyText(maybeBotReply.getBody());
 					if (botReply.startsWith("game started")) {
 						continue replies;
 					}
