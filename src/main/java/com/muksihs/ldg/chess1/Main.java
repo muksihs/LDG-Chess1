@@ -859,9 +859,6 @@ public class Main extends AbstractApp {
 	}
 
 	private String getParsableBodyText(String bodyText) {
-		if (bodyText.contains("\n")) {
-			bodyText = StringUtils.substringBefore(bodyText, "\n");
-		}
 		return StringUtils.normalizeSpace(bodyText.replaceAll("<[^>]*?>", " ").replace(":", " ").toLowerCase().trim());
 	}
 
