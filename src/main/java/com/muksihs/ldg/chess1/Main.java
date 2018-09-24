@@ -381,6 +381,12 @@ public class Main extends AbstractApp {
 		sb.append("<hr/>\n");
 		sb.append(getInstructionsHtml());
 		sb.append("<hr/>\n");
+		sb.append("<p><center>");
+		sb.append("Images created with");
+		sb.append(" <a target='_blank' href='http://www.fen-to-image.com/'>");
+		sb.append("http://www.fen-to-image.com/");
+		sb.append("</a>");
+		sb.append("</center></p>");
 		sb.append("<p>FEN: ");
 		sb.append(cgd.getFen());
 		sb.append("</p>\n");
@@ -412,10 +418,11 @@ public class Main extends AbstractApp {
 		sb.append(" Example:<ul><li>move: b2 b1 knight</li></ul>");
 		sb.append("</div>\n");
 
-//		sb.append("<div>");
-//		sb.append("To perform an <strong>en passant</strong> reply with 'MOVE: square from square to en passant'.");
-//		sb.append(" Example:<ul><li>move: e5 f6 en passant</li></ul>");
-//		sb.append("</div>\n");
+		// sb.append("<div>");
+		// sb.append("To perform an <strong>en passant</strong> reply with 'MOVE: square
+		// from square to en passant'.");
+		// sb.append(" Example:<ul><li>move: e5 f6 en passant</li></ul>");
+		// sb.append("</div>\n");
 
 		sb.append("<div>");
 		sb.append("To <strong>request a draw</strong> reply with 'MOVE: draw?'.");
@@ -544,8 +551,9 @@ public class Main extends AbstractApp {
 		return semaphores;
 	}
 
-	private void doRunGameTurns() throws JsonParseException, JsonMappingException, IOException,
-			SteemCommunicationException, SteemResponseException, MoveException, MoveGeneratorException, MoveConversionException {
+	private void doRunGameTurns()
+			throws JsonParseException, JsonMappingException, IOException, SteemCommunicationException,
+			SteemResponseException, MoveException, MoveGeneratorException, MoveConversionException {
 		Map<Permlink, ChessGameData> activeGames = getActiveGames();
 		System.out.println("=== " + NF.format(activeGames.size()) + " active games.");
 		Set<Permlink> activeGamesKeySet = activeGames.keySet();
@@ -664,7 +672,7 @@ public class Main extends AbstractApp {
 						continue playerReplies;
 					}
 					String s1 = iMove.next();
-					if (!iMove.hasNext() && s1.length()<4) {
+					if (!iMove.hasNext() && s1.length() < 4) {
 						MoveResponse response = new MoveResponse();
 						response.setPermlink(playerReplyPermlink);
 						response.setPlayer(playerReply.getAuthor());
@@ -672,16 +680,16 @@ public class Main extends AbstractApp {
 						continue playerReplies;
 					}
 					String s2;
-					if (s1.length()>=4) {
+					if (s1.length() >= 4) {
 						s2 = s1.substring(2);
 						s1 = s1.substring(0, 2);
 					} else {
 						s2 = iMove.next();
 					}
-					String promotion="";
-					if (s2.length()>2) {
-						promotion=s2.substring(2);
-						s2=s2.substring(0, 2);
+					String promotion = "";
+					if (s2.length() > 2) {
+						promotion = s2.substring(2);
+						s2 = s2.substring(0, 2);
 					}
 					Square square1;
 					try {
@@ -705,10 +713,10 @@ public class Main extends AbstractApp {
 								"REJECTED\nDestination square not understood.\nMust be from a1 to h8. Do not specify extra information such as the piece.\n");
 						continue playerReplies;
 					}
-					
-					if (!StringUtils.isBlank(promotion)&&iMove.hasNext()) {
-						promotion=iMove.next();
-						}
+
+					if (!StringUtils.isBlank(promotion) && iMove.hasNext()) {
+						promotion = iMove.next();
+					}
 					if (promotion.startsWith("queen")) {
 						promotion = "QUEEN";
 					}
@@ -721,18 +729,18 @@ public class Main extends AbstractApp {
 					if (promotion.startsWith("bishop")) {
 						promotion = "BISHOP";
 					}
-					theMove = s1+s2+promotion;
+					theMove = s1 + s2 + promotion;
 					if (!processActiveGameMove(activeGame, playerReply, theMove, responses)) {
 						iActiveGames.remove();
-					} 
+					}
 					continue activeGames;
 				}
 			}
 		}
 	}
 
-	//TODO
-	private boolean processActiveGameMove(ChessGameData activeGame, Discussion playerReply, String theMove, 
+	// TODO
+	private boolean processActiveGameMove(ChessGameData activeGame, Discussion playerReply, String theMove,
 			List<MoveResponse> responses) throws MoveException, MoveGeneratorException, MoveConversionException {
 		Board board = new Board();
 		try {
@@ -743,11 +751,12 @@ public class Main extends AbstractApp {
 
 		Player whitePlayer = GameFactory.newPlayer(PlayerType.HUMAN, activeGame.getPlayerWhite());
 		Player blackPlayer = GameFactory.newPlayer(PlayerType.HUMAN, activeGame.getPlayerBlack());
-		
+
 		Event newGame = GameFactory.newEvent("Leather Dog Chess 1");
 		newGame.setEndDate("");
 		newGame.setSite("https://busy.org/@leatherdog-games");
-		String startDate = activeGame.getStartDate()==null?new java.sql.Date(System.currentTimeMillis()).toString():activeGame.getStartDate();
+		String startDate = activeGame.getStartDate() == null ? new java.sql.Date(System.currentTimeMillis()).toString()
+				: activeGame.getStartDate();
 		newGame.setStartDate(startDate);
 
 		Round startingRound = GameFactory.newRound(newGame, 0);
@@ -757,26 +766,26 @@ public class Main extends AbstractApp {
 		game.setDate(startDate);
 		game.setResult(GameResult.ONGOING);
 		game.setVariation(board.getContext().getVariationType().name());
-		
+
 		String gameId = activeGame.getGameId();
 		game.setGameId(gameId);
 		game.setMoveText(new StringBuilder());
 
 		game.setWhitePlayer(whitePlayer);
 		game.setBlackPlayer(blackPlayer);
-		
+
 		MoveList ml = new MoveList();
 		if (!StringUtils.isBlank(activeGame.getSan())) {
 			ml.loadFromSan(activeGame.getSan());
 		}
-		
+
 		game.setHalfMoves(ml);
 		game.gotoLast();
-		
+
 		MoveList legal = MoveGenerator.generateLegalMoves(board);
-		
+
 		Move move = new Move(theMove, board.getSideToMove());
-		
+
 		if (!legal.contains(move)) {
 			MoveResponse response = new MoveResponse();
 			response.setPermlink(playerReply.getPermlink());
@@ -785,14 +794,14 @@ public class Main extends AbstractApp {
 			responses.add(response);
 			return false;
 		}
-		
+
 		ml.add(move);
 		game.setHalfMoves(ml);
 		game.gotoLast();
-		
+
 		StringBuilder gameTitle = new StringBuilder();
-		gameTitle.append("Chess " + whitePlayer + " vs " + blackPlayer + " - Round " + (1 + ml.size()/2)
-				+ " - " + board.getSideToMove() + LSQUO + "s MOVE [" + gameId + "]");
+		gameTitle.append("Chess " + whitePlayer + " vs " + blackPlayer + " - Round " + (1 + ml.size() / 2) + " - "
+				+ board.getSideToMove() + LSQUO + "s MOVE [" + gameId + "]");
 
 		System.out.println("=== " + gameTitle);
 
@@ -809,10 +818,10 @@ public class Main extends AbstractApp {
 		cgd.setPlayerToMove(board.getSideToMove().equals(Side.WHITE) ? whitePlayer.getName() : blackPlayer.getName());
 		cgd.setStalemate(board.isStaleMate());
 		cgd.setVariationType(board.getContext().getVariationType().name());
-		
+
 		cgd.setFan(game.getHalfMoves().toFan());
 		cgd.setSan(game.getHalfMoves().toSan());
-		
+
 		Map<String, Object> metadata = getAppMetadata();
 		metadata.put("chessGameData", cgd);
 
@@ -824,20 +833,19 @@ public class Main extends AbstractApp {
 		tags.add(gameId);
 
 		String turnHtml = generateTurnHtml(cgd);
-		
+
 		retries: for (int retries = 0; retries < 10; retries++) {
 			try {
 				waitCheckBeforePosting(steemJ);
-				CommentOperation info = steemJ.createPost(gameTitle.toString(), turnHtml,
-						tags.toArray(new String[0]), MIME_HTML, metadata);
-//				gameLinks.put(match.getSemaphore(), info.getPermlink());
+				CommentOperation info = steemJ.createPost(gameTitle.toString(), turnHtml, tags.toArray(new String[0]),
+						MIME_HTML, metadata);
+				// gameLinks.put(match.getSemaphore(), info.getPermlink());
 				break;
 			} catch (SteemCommunicationException | SteemResponseException | SteemInvalidTransactionException e) {
 				continue retries;
 			}
 		}
-		
-		
+
 		return true;
 	}
 
