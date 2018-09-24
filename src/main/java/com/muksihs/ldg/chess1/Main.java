@@ -1380,6 +1380,8 @@ public class Main extends AbstractApp {
 
 	private NewGameInviteInfo generateNewGameInviteHtml() throws IOException {
 
+		String gameId = String.valueOf(System.currentTimeMillis() / 1000l / 60l / 5l);
+		
 		System.out.println("Generating HTML for new game invite.");
 		StringBuilder gameInvite = new StringBuilder();
 		gameInvite.append("<html>");
@@ -1387,7 +1389,7 @@ public class Main extends AbstractApp {
 		gameInvite.append(
 				"<img src='http://www.fen-to-image.com/image/128/double/coords/rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR'/>");
 		gameInvite.append("</div>\n");
-		gameInvite.append("<h1>(BETA!) Leather Dog Chess - New Game Invite</h1>\n");
+		gameInvite.append("<h1>Leather Dog Chess - New Game Invite</h1>\n");
 		gameInvite.append("<h3>Attention Game Players!</h3>\n");
 		gameInvite.append("<ul>\n");
 		gameInvite.append("<li>Reply to this post with `play @specificusername`");
@@ -1404,10 +1406,10 @@ public class Main extends AbstractApp {
 		gameInvite.append("https://github.com/muksihs/LDG-Chess1");
 		gameInvite.append("</a>");
 		gameInvite.append("</h4></center>\n");
+		gameInvite.append("The bot is still a work in progress. Sometimes it hiccups.");
 		gameInvite.append("</html>\n");
 
-		String gameId = String.valueOf(System.currentTimeMillis() / 1000l / 60l / 5l);
-		String title = "(BETA!) " + generateGameInviteTitle(gameId);
+		String title = generateGameInviteTitle(gameId);
 		String permlink = "@" + botAccount.getName() + "/" + SteemJUtils.createPermlinkString(title);
 		String gameInviteHtml = gameInvite.toString();
 		gameInviteHtml = gameInviteHtml.replace(_PERMLINK, permlink);
@@ -1422,7 +1424,7 @@ public class Main extends AbstractApp {
 	private static final String _PERMLINK = "_permlink_";
 
 	private String generateGameInviteTitle(String gameId) {
-		String title = "Leather Dog Chess - New Player Signup! " + " - [" + gameId + "]";
+		String title = "Leather Dog Chess - Player Match Signups! " + " - [" + gameId + "]";
 		return title;
 	}
 
