@@ -43,7 +43,6 @@ import com.github.bhlangonijr.chesslib.Side;
 import com.github.bhlangonijr.chesslib.Square;
 import com.github.bhlangonijr.chesslib.game.Event;
 import com.github.bhlangonijr.chesslib.game.Game;
-import com.github.bhlangonijr.chesslib.game.GameContext;
 import com.github.bhlangonijr.chesslib.game.GameFactory;
 import com.github.bhlangonijr.chesslib.game.GameResult;
 import com.github.bhlangonijr.chesslib.game.Player;
@@ -85,7 +84,6 @@ import steem.models.ChessGameData;
 
 public class Main extends AbstractApp {
 
-	private final Board board;
 	/**
 	 * Java properties file to obtain <strong>posting</strong> key and account name
 	 * from.
@@ -96,7 +94,6 @@ public class Main extends AbstractApp {
 		super(config, args);
 		config.setAutoExit(true);
 		config.setAutoExitOnError(true);
-		board = new Board(new GameContext(), true);
 		initJackson();
 	}
 
@@ -163,10 +160,10 @@ public class Main extends AbstractApp {
 		steemJ = initilizeSteemJ(accountInfo);
 		botAccount = accountInfo.getAccountName();
 
-//		doUpvoteChecks();
-//		doAnnounceGamePost();
 		doRunGameTurns();
-//		doStartNewMatches();
+		doStartNewMatches();
+		doAnnounceGamePost();
+		doUpvoteChecks();
 
 	}
 
