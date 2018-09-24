@@ -379,12 +379,21 @@ public class Main extends AbstractApp {
 		sb.append("<hr/>\n");
 		sb.append(getInstructionsHtml());
 		sb.append("<hr/>\n");
+		
 		sb.append("<p><center>");
 		sb.append("Images created with");
 		sb.append(" <a target='_blank' href='http://www.fen-to-image.com/'>");
 		sb.append("http://www.fen-to-image.com/");
 		sb.append("</a>");
 		sb.append("</center></p>");
+		
+		sb.append("<p><center>");
+		sb.append("Github: ");
+		sb.append(" <a target='_blank' href='https://github.com/muksihs/LDG-Chess1'>");
+		sb.append("LDG-Chess1");
+		sb.append("</a>");
+		sb.append("</center></p>");
+		
 		sb.append("<p>FEN: ");
 		sb.append(cgd.getFen());
 		sb.append("</p>\n");
