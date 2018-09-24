@@ -42,7 +42,7 @@ dependencies {
 	compile group: 'org.slf4j', name: 'slf4j-jdk14', version: '1.7.25'
 	// https://mvnrepository.com/artifact/org.apache.commons/commons-math3
 	//compile group: 'org.apache.commons', name: 'commons-math3', version: '3.6.1'
-	compile 'com.github.CherokeeLanguage:SimpleTextUi:20180903'
+	compile 'com.github.CherokeeLanguage:SimpleTextUi:5fd5b9ddc6'
 	
 	compile 'com.github.muksihs:chesslib:e3294c8c71'
 	
