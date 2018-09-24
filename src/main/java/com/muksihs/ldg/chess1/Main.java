@@ -12,6 +12,7 @@ import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.GregorianCalendar;
@@ -162,10 +163,10 @@ public class Main extends AbstractApp {
 		steemJ = initilizeSteemJ(accountInfo);
 		botAccount = accountInfo.getAccountName();
 
-		doUpvoteChecks();
-		doAnnounceGamePost();
+//		doUpvoteChecks();
+//		doAnnounceGamePost();
 		doRunGameTurns();
-		doStartNewMatches();
+//		doStartNewMatches();
 
 	}
 
@@ -193,8 +194,8 @@ public class Main extends AbstractApp {
 				SignupReject reject = new SignupReject();
 				reject.setChallenger(challenger);
 				reject.setPermlink(permlink);
-				reject.setTags(tags);
 				reject.setReason("<html><h4>Rejected</h4><h5>Match already in progress.</h5></html>");
+				reject.setTags(tags);
 				rejects.add(reject);
 				iPlayers.remove();
 				continue;
@@ -203,8 +204,8 @@ public class Main extends AbstractApp {
 				SignupReject reject = new SignupReject();
 				reject.setChallenger(challenger);
 				reject.setPermlink(permlink);
-				reject.setTags(tags);
 				reject.setReason("<html><h4>Rejected</h4><h5>You are not allowed to play yourself.</h5></html>");
+				reject.setTags(tags);
 				rejects.add(reject);
 				iPlayers.remove();
 				continue;
@@ -215,9 +216,9 @@ public class Main extends AbstractApp {
 					SignupReject reject = new SignupReject();
 					reject.setChallenger(challenger);
 					reject.setPermlink(permlink);
-					reject.setTags(tags);
 					reject.setReason("<html><h4>Rejected</h4><h5>The account @" + challenged.getName()
 							+ " does not exist.</h5></html>");
+					reject.setTags(tags);
 					rejects.add(reject);
 					iPlayers.remove();
 					continue;
@@ -225,7 +226,7 @@ public class Main extends AbstractApp {
 			}
 		}
 
-		doNewPlayerSignupRejects(rejects);
+		doPlayerSignupRejects(rejects);
 
 		List<PlayerMatch> matches = getConfirmedMatches(newPlayers);
 		List<PlayerMatch> otherMatches = getRandomMatches(newPlayers, matches);
@@ -514,7 +515,7 @@ public class Main extends AbstractApp {
 		return matches;
 	}
 
-	private void doNewPlayerSignupRejects(Set<SignupReject> rejects)
+	private void doPlayerSignupRejects(Set<SignupReject> rejects)
 			throws SteemCommunicationException, SteemResponseException, SteemInvalidTransactionException {
 		for (SignupReject reject : rejects) {
 			retries: for (int retries = 0; retries < 10; retries++) {
@@ -528,6 +529,36 @@ public class Main extends AbstractApp {
 							reject.getTags());
 					break retries;
 				} catch (Exception e) {
+				}
+			}
+		}
+	}
+	
+	private void doPlayerResponses(Collection<MoveResponse> responses) {
+		for (MoveResponse response : responses) {
+			retries: for (int retries = 0; retries < 10; retries++) {
+				try {
+					String[] tags=null;
+					Discussion content = steemJ.getContent(response.getPlayer(), response.getPermlink());
+					if (content != null) {
+						try {
+							ChessCommentMetadata ccm = json.readValue(content.getJsonMetadata(), ChessCommentMetadata.class);
+							tags = ccm.getTags();
+						} catch (IOException e) {
+						}
+					}
+					
+					if (tags==null || tags.length==0) {
+						tags = new String[] {"chess"};
+					}
+					System.out.println("Response: @"+response.getPlayer().getName()+" => "+response.getReason());
+					waitCheckBeforeReplying(steemJ);
+					steemJ.createComment(response.getPlayer(), //
+							response.getPermlink(), //
+							response.getReason(), //
+							tags);
+					break retries;
+				} catch (SteemCommunicationException | SteemResponseException | SteemInvalidTransactionException e) {
 				}
 			}
 		}
@@ -553,7 +584,7 @@ public class Main extends AbstractApp {
 
 	private void doRunGameTurns()
 			throws JsonParseException, JsonMappingException, IOException, SteemCommunicationException,
-			SteemResponseException, MoveException, MoveGeneratorException, MoveConversionException {
+			SteemResponseException, MoveException, MoveGeneratorException, MoveConversionException, SteemInvalidTransactionException {
 		Map<Permlink, ChessGameData> activeGames = getActiveGames();
 		System.out.println("=== " + NF.format(activeGames.size()) + " active games.");
 		Set<Permlink> activeGamesKeySet = activeGames.keySet();
@@ -577,6 +608,16 @@ public class Main extends AbstractApp {
 			}
 			String theMove;
 			playerReplies: for (Discussion playerReply : replies) {
+				String[] tags;
+				try {
+					ChessCommentMetadata ccm = json.readValue(playerReply.getJsonMetadata(), ChessCommentMetadata.class);
+					tags = ccm.getTags();
+				} catch (Exception e1) {
+					tags = null;
+				}
+				if (tags == null || tags.length==0) {
+					tags = new String[] {"chess"};
+				}
 				if (!playerToMove.equals(playerReply.getAuthor())) {
 					System.out.println(" -- Skipping reply by: " + playerReply.getAuthor().getName());
 					continue playerReplies;
@@ -625,7 +666,8 @@ public class Main extends AbstractApp {
 					}
 				}
 
-				String move = getParsableBodyText(playerReply.getBody());
+				String playerReplyBody = playerReply.getBody();
+				String move = getParsableBodyText(playerReplyBody);
 				String[] moveParts = move.trim().split("\\s");
 				if (moveParts == null) {
 					System.out.println(" -- Skipping unparsable reply body: " + playerReply.getAuthor().getName());
@@ -661,7 +703,7 @@ public class Main extends AbstractApp {
 					}
 					if (!next.startsWith("move")) {
 						System.out.println(" -- Skipping not a move reply body: " + playerReply.getAuthor().getName());
-						System.out.println(" -- " + playerReply.getBody());
+						System.out.println(" -- " + playerReplyBody);
 						continue playerReplies;
 					}
 					if (!iMove.hasNext()) {
@@ -669,6 +711,7 @@ public class Main extends AbstractApp {
 						response.setPermlink(playerReplyPermlink);
 						response.setPlayer(playerReply.getAuthor());
 						response.setReason("REJECTED\nNo squares specified.");
+						System.out.println(response.getReason());
 						continue playerReplies;
 					}
 					String s1 = iMove.next();
@@ -677,6 +720,7 @@ public class Main extends AbstractApp {
 						response.setPermlink(playerReplyPermlink);
 						response.setPlayer(playerReply.getAuthor());
 						response.setReason("REJECTED\nNo destination square specified.");
+						System.out.println(response.getReason());
 						continue playerReplies;
 					}
 					String s2;
@@ -691,30 +735,30 @@ public class Main extends AbstractApp {
 						promotion = s2.substring(2);
 						s2 = s2.substring(0, 2);
 					}
-					Square square1;
 					try {
-						square1 = Square.valueOf(s1.toUpperCase());
+						Square.valueOf(s1.toUpperCase());
 					} catch (Exception e) {
 						MoveResponse response = new MoveResponse();
 						response.setPermlink(playerReplyPermlink);
 						response.setPlayer(playerReply.getAuthor());
 						response.setReason(
 								"REJECTED\nSource square not understood.\nMust be from a1 to h8. Do not specify extra information such as the piece.\n");
+						System.out.println(response.getReason());
 						continue playerReplies;
 					}
-					Square square2;
 					try {
-						square2 = Square.valueOf(s2.toUpperCase());
+						Square.valueOf(s2.toUpperCase());
 					} catch (Exception e) {
 						MoveResponse response = new MoveResponse();
 						response.setPermlink(playerReplyPermlink);
 						response.setPlayer(playerReply.getAuthor());
 						response.setReason(
 								"REJECTED\nDestination square not understood.\nMust be from a1 to h8. Do not specify extra information such as the piece.\n");
+						System.out.println(response.getReason());
 						continue playerReplies;
 					}
 
-					if (!StringUtils.isBlank(promotion) && iMove.hasNext()) {
+					if (StringUtils.isBlank(promotion) && iMove.hasNext()) {
 						promotion = iMove.next();
 					}
 					if (promotion.startsWith("queen")) {
@@ -734,11 +778,13 @@ public class Main extends AbstractApp {
 					case "KNIGHT":
 					case "ROOK":
 					case "BISHIP":
+						System.out.println("Promotion: "+promotion);
 						break;
 					default:
 						promotion = "";
 					}
 					theMove = s1 + s2 + promotion;
+					System.out.println("Move: "+theMove);
 					if (!processActiveGameMove(activeGame, playerReply, theMove, responses)) {
 						iActiveGames.remove();
 					}
@@ -746,6 +792,7 @@ public class Main extends AbstractApp {
 				}
 			}
 		}
+		doPlayerResponses(responses);
 	}
 
 	// TODO
@@ -800,6 +847,7 @@ public class Main extends AbstractApp {
 			response.setPermlink(playerReply.getPermlink());
 			response.setPlayer(playerReply.getAuthor());
 			response.setReason("REJECTED\nNot a valid move.");
+			System.out.println(response.getReason());
 			responses.add(response);
 			return false;
 		}
