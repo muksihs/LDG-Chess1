@@ -358,8 +358,8 @@ public class Main extends AbstractApp {
 
 	private String generateTurnHtml(ChessGameData cgd) {
 		// TODO Switch to using template HTML
-		String WHITE_ORIENTATION = DogChessUtils.getChessboardImageHtml(cgd.getFen());
-		String BLACK_ORIENTATION = DogChessUtils.getChessboardRotatedImageHtml(cgd.getFen());
+		String WHITE_ORIENTATION = DogChessUtils.getJinchessChessboardImageHtml(cgd.getFen(), cgd.getSideToMove());
+		String BLACK_ORIENTATION = DogChessUtils.getJinchessChessboardRotatedImageHtml(cgd.getFen(), cgd.getSideToMove());
 		boolean isWhiteToMove = cgd.getSideToMove().equalsIgnoreCase("white");
 
 		StringBuilder sb = new StringBuilder();
@@ -1391,7 +1391,7 @@ public class Main extends AbstractApp {
 		gameInvite.append("<html>");
 		gameInvite.append("<div class='pull-right'>");
 		gameInvite.append(
-				"<img src='http://www.fen-to-image.com/image/128/double/coords/rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR'/>");
+				"<img src='http://www.jinchess.com/chessboard/?p=rnbqkbnrpppppppp--------------------------------PPPPPPPPRNBQKBNR&tm=w&s=xl&bp=wooden-dark&cm=o'/>");
 		gameInvite.append("</div>\n");
 		gameInvite.append("<h1>Leather Dog Chess - New Game Invite</h1>\n");
 		gameInvite.append("<h3>Attention Game Players!</h3>\n");
