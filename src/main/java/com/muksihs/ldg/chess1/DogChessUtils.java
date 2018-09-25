@@ -61,7 +61,15 @@ public class DogChessUtils {
 		sideToMove = fixupSideToMove(sideToMove);
 		fen = StringUtils.substringBefore(fen, " ");
 		String tmp = URL_JINCHESS_FEN2IMAGE.replace("_FEN_", fen);
-		return tmp.replace("_FEN_", sideToMove);
+		return tmp.replace("_SIDE_", sideToMove);
+	}
+
+
+	public static String getJinchessChessboardUrlRotated(String fen, String sideToMove) {
+		sideToMove = fixupSideToMove(sideToMove);
+		fen = StringUtils.substringBefore(fen, " ");
+		String tmp = URL_JINCHESS_FEN2IMAGE_ROTATED.replace("_FEN_", StringUtils.reverse(fen));
+		return tmp.replace("_SIDE_", sideToMove);
 	}
 
 	private static String fixupSideToMove(String sideToMove) {
@@ -74,12 +82,4 @@ public class DogChessUtils {
 		}
 		return sideToMove;
 	}
-
-	public static String getJinchessChessboardUrlRotated(String fen, String sideToMove) {
-		sideToMove = fixupSideToMove(sideToMove);
-		fen = StringUtils.substringBefore(fen, " ");
-		String tmp = URL_JINCHESS_FEN2IMAGE_ROTATED.replace("_FEN_", StringUtils.reverse(fen));
-		return tmp.replace("_FEN_", sideToMove);
-	}
-
 }
