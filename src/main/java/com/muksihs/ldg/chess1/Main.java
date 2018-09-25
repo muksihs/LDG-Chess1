@@ -358,6 +358,10 @@ public class Main extends AbstractApp {
 
 	private String generateTurnHtml(ChessGameData cgd) {
 		// TODO Switch to using template HTML
+		String WHITE_ORIENTATION = DogChessUtils.getChessboardImageHtml(cgd.getFen());
+		String BLACK_ORIENTATION = DogChessUtils.getChessboardRotatedImageHtml(cgd.getFen());
+		boolean isWhiteToMove = cgd.getSideToMove().equalsIgnoreCase("white");
+
 		StringBuilder sb = new StringBuilder();
 		sb.append("<html>\n");
 
@@ -371,10 +375,10 @@ public class Main extends AbstractApp {
 		sb.append("</strong></center></p>\n");
 
 		sb.append("<p><center>\n");
-		sb.append(DogChessUtils.getChessboardImageHtml(cgd.getFen()));
+		sb.append(isWhiteToMove ? WHITE_ORIENTATION : BLACK_ORIENTATION);
 		sb.append("\n</center></p>\n");
 		sb.append("<p><center>\n");
-		sb.append(DogChessUtils.getChessboardRotatedImageHtml(cgd.getFen()));
+		sb.append(isWhiteToMove ? BLACK_ORIENTATION : WHITE_ORIENTATION);
 		sb.append("\n</center></p>\n");
 		sb.append("<hr/>\n");
 		sb.append(getInstructionsHtml());
@@ -1381,7 +1385,7 @@ public class Main extends AbstractApp {
 	private NewGameInviteInfo generateNewGameInviteHtml() throws IOException {
 
 		String gameId = String.valueOf(System.currentTimeMillis() / 1000l / 60l / 5l);
-		
+
 		System.out.println("Generating HTML for new game invite.");
 		StringBuilder gameInvite = new StringBuilder();
 		gameInvite.append("<html>");
