@@ -386,8 +386,8 @@ public class Main extends AbstractApp {
 
 		sb.append("<p><center>");
 		sb.append("Images created with");
-		sb.append(" <a target='_blank' href='http://www.fen-to-image.com/'>");
-		sb.append("http://www.fen-to-image.com/");
+		sb.append(" <a target='_blank' href='http://www.jinchess.com/chessboard/composer/'>");
+		sb.append("http://www.jinchess.com/chessboard/composer/");
 		sb.append("</a>");
 		sb.append("</center></p>");
 
