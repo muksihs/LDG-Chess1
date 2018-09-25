@@ -64,9 +64,17 @@ public class DogChessUtils {
 		return tmp.replace("_SIDE_", sideToMove);
 	}
 
-
 	public static String getJinchessChessboardUrlRotated(String fen, String sideToMove) {
 		sideToMove = fixupSideToMove(sideToMove);
+		switch (sideToMove) {
+		case "b":
+			sideToMove = "w";
+			break;
+		case "w":
+			sideToMove = "b";
+			break;
+		default:
+		}
 		fen = StringUtils.substringBefore(fen, " ");
 		String tmp = URL_JINCHESS_FEN2IMAGE_ROTATED.replace("_FEN_", StringUtils.reverse(fen));
 		return tmp.replace("_SIDE_", sideToMove);
