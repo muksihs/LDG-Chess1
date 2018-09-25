@@ -358,8 +358,8 @@ public class Main extends AbstractApp {
 
 	private String generateTurnHtml(ChessGameData cgd) {
 		// TODO Switch to using template HTML
-		String WHITE_ORIENTATION = DogChessUtils.getJinchessChessboardImageHtml(cgd.getFen(), cgd.getSideToMove());
-		String BLACK_ORIENTATION = DogChessUtils.getJinchessChessboardRotatedImageHtml(cgd.getFen(), cgd.getSideToMove());
+		String WHITE_ORIENTATION = DogChessUtils.getJinchessHtml(cgd.getFen(), cgd.getSideToMove());
+		String BLACK_ORIENTATION = DogChessUtils.getJinchessRotatedHtml(cgd.getFen(), cgd.getSideToMove());
 		boolean isWhiteToMove = cgd.getSideToMove().equalsIgnoreCase("white");
 
 		StringBuilder sb = new StringBuilder();
