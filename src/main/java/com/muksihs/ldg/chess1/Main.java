@@ -35,6 +35,7 @@ import com.cherokeelessons.gui.AbstractApp;
 import com.cherokeelessons.gui.MainWindow;
 import com.cherokeelessons.gui.MainWindow.Config;
 import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -261,6 +262,9 @@ public class Main extends AbstractApp {
 						getAppMetadata());
 				break retries;
 			} catch (SteemCommunicationException | SteemResponseException | SteemInvalidTransactionException e) {
+				if (e.getMessage().contains("wait to transact")) {
+					throw new RuntimeException(e);
+				}
 			}
 		}
 	}
@@ -349,6 +353,9 @@ public class Main extends AbstractApp {
 					gameLinks.put(match.getSemaphore(), info.getPermlink());
 					break;
 				} catch (SteemCommunicationException | SteemResponseException | SteemInvalidTransactionException e) {
+					if (e.getMessage().contains("wait to transact")) {
+						throw new RuntimeException(e);
+					}
 					continue retries;
 				}
 			}
@@ -539,6 +546,9 @@ public class Main extends AbstractApp {
 							reject.getTags());
 					break retries;
 				} catch (Exception e) {
+					if (e.getMessage().contains("wait to transact")) {
+						throw new RuntimeException(e);
+					}
 				}
 			}
 		}
@@ -570,6 +580,9 @@ public class Main extends AbstractApp {
 							tags);
 					break retries;
 				} catch (SteemCommunicationException | SteemResponseException | SteemInvalidTransactionException e) {
+					if (e.getMessage().contains("wait to transact")) {
+						throw new RuntimeException(e);
+					}
 				}
 			}
 		}
@@ -908,9 +921,17 @@ public class Main extends AbstractApp {
 				waitCheckBeforePosting(steemJ);
 				CommentOperation info = steemJ.createPost(gameTitle.toString(), turnHtml, tags.toArray(new String[0]),
 						MIME_HTML, metadata);
+				try {
+					System.out.println(json.writeValueAsString(info));
+				} catch (JsonProcessingException e) {
+					e.printStackTrace();
+				}
 				// gameLinks.put(match.getSemaphore(), info.getPermlink());
 				break;
 			} catch (SteemCommunicationException | SteemResponseException | SteemInvalidTransactionException e) {
+				if (e.getMessage().contains("wait to transact")) {
+					throw new RuntimeException(e);
+				}
 				continue retries;
 			}
 		}
@@ -1073,7 +1094,10 @@ public class Main extends AbstractApp {
 				steemJ.vote(botAccount, article.getPermlink(), (short) 100);
 				sleep(3500);
 			} catch (Exception e) {
-				// ignore any up vote errors
+				if (e.getMessage().contains("wait to transact")) {
+					throw new RuntimeException(e);
+				}
+				// ignore any other up vote error types
 				System.err.println("Error on up vote. IGNORED.");
 				System.err.println(e.getClass().getName() + ":\n" + e.getMessage());
 			}
@@ -1242,6 +1266,9 @@ public class Main extends AbstractApp {
 				steemJ.createPost(info.getTitle(), info.getHtml(), tags, MIME_HTML, getAppMetadata());
 				return;
 			} catch (Exception e) {
+				if (e.getMessage().contains("wait to transact")) {
+					throw new RuntimeException(e);
+				}
 				System.err.println("Posting error. Sleeping 5 minutes.");
 				if (e.getMessage().contains("STEEMIT_MIN_ROOT_COMMENT_INTERVAL")) {
 					System.err.println("STEEMIT_MIN_ROOT_COMMENT_INTERVAL");
