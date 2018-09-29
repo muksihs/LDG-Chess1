@@ -3,6 +3,7 @@ package steem.models;
 import java.util.List;
 
 public class ChessGameData {
+	private boolean gameSignupPost=false;
 	private String startDate;
 	private boolean resigned;
 	private String resignedBy;
@@ -121,5 +122,11 @@ public class ChessGameData {
 	}
 	public void setStartDate(String startDate) {
 		this.startDate = startDate;
+	}
+	public boolean isGameSignupPost() {
+		return gameSignupPost;
+	}
+	public void setGameSignupPost(boolean gameSignupPost) {
+		this.gameSignupPost = gameSignupPost;
 	}
 }

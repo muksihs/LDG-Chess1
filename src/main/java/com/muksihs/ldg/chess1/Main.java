@@ -85,6 +85,7 @@ import steem.models.ChessGameData;
 
 public class Main extends AbstractApp {
 
+	private static final String TAG_CHESS_GAME_DATA = "chessGameData";
 	/**
 	 * Java properties file to obtain <strong>posting</strong> key and account name
 	 * from.
@@ -348,7 +349,7 @@ public class Main extends AbstractApp {
 			cgd.setVariationType(board.getContext().getVariationType().name());
 
 			Map<String, Object> metadata = getAppMetadata();
-			metadata.put("chessGameData", cgd);
+			metadata.put(TAG_CHESS_GAME_DATA, cgd);
 
 			List<String> tags = new ArrayList<>();
 			tags.add("playbypost");
@@ -928,7 +929,7 @@ public class Main extends AbstractApp {
 		cgd.setSan(game.getHalfMoves().toSan());
 
 		Map<String, Object> metadata = getAppMetadata();
-		metadata.put("chessGameData", cgd);
+		metadata.put(TAG_CHESS_GAME_DATA, cgd);
 
 		List<String> tags = new ArrayList<>();
 		tags.add("playbypost");
@@ -1286,7 +1287,11 @@ public class Main extends AbstractApp {
 				if (DogChessUtils.doRcAbortCheck(botAccount)) {
 					throw new RuntimeException("INSUFFICENT RCs");
 				}
-				steemJ.createPost(info.getTitle(), info.getHtml(), tags, MIME_HTML, getAppMetadata());
+				Map<String, Object> appMetadata = getAppMetadata();
+				ChessGameData cgd = new ChessGameData();
+				cgd.setGameSignupPost(true);
+				appMetadata.put(TAG_CHESS_GAME_DATA, cgd);
+				steemJ.createPost(info.getTitle(), info.getHtml(), tags, MIME_HTML, appMetadata);
 				return;
 			} catch (Exception e) {
 				if (e.getMessage().contains("wait to transact")) {
@@ -1329,7 +1334,12 @@ public class Main extends AbstractApp {
 			if (!tags.contains("chess")) {
 				continue gameScan;
 			}
-			if (!tags.contains("new-game")) {
+			ChessGameData chessGameData = metadata.getChessGameData();
+			boolean gameSignupPost = false;
+			if (chessGameData!=null) {
+				gameSignupPost = chessGameData.isGameSignupPost();
+			}
+			if (!gameSignupPost && !tags.contains("new-game")) {
 				continue gameScan;
 			}
 			Date created = entry.getComment().getCreated().getDateTimeAsDate();
