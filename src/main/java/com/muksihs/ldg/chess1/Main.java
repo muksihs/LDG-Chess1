@@ -176,7 +176,16 @@ public class Main extends AbstractApp {
 		if (DogChessUtils.doRcAbortCheck(botAccount)) {
 			return;
 		}
+		doParticipationPayouts();
+		if (DogChessUtils.doRcAbortCheck(botAccount)) {
+			return;
+		}
 		doUpvoteChecks();
+	}
+
+	private void doParticipationPayouts() {
+		// TODO Auto-generated method stub
+		
 	}
 
 	private void doStartNewMatches()
