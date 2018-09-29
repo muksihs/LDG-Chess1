@@ -35,7 +35,6 @@ import com.cherokeelessons.gui.AbstractApp;
 import com.cherokeelessons.gui.MainWindow;
 import com.cherokeelessons.gui.MainWindow.Config;
 import com.fasterxml.jackson.core.JsonParseException;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -727,7 +726,7 @@ public class Main extends AbstractApp {
 					System.out.println(" -- Skipping empty reply body: " + playerReply.getAuthor().getName());
 					continue playerReplies;
 				}
-				iMove: while (iMove.hasNext()) {
+				while (iMove.hasNext()) {
 					String next = iMove.next();
 					if (next.startsWith("draw")) {
 						MoveResponse response = new MoveResponse();
@@ -844,7 +843,6 @@ public class Main extends AbstractApp {
 		doPlayerResponses(responses);
 	}
 
-	// TODO
 	private boolean processActiveGameMove(ChessGameData activeGame, Discussion playerReply, String theMove,
 			List<MoveResponse> responses) throws MoveException, MoveGeneratorException, MoveConversionException, JsonParseException, JsonMappingException, IOException {
 		Board board = new Board();
@@ -946,7 +944,7 @@ public class Main extends AbstractApp {
 				if (DogChessUtils.doRcAbortCheck(botAccount)) {
 					throw new RuntimeException("INSUFFICENT RCs");
 				}
-				CommentOperation info = steemJ.createPost(gameTitle.toString(), turnHtml, tags.toArray(new String[0]),
+				steemJ.createPost(gameTitle.toString(), turnHtml, tags.toArray(new String[0]),
 						MIME_HTML, metadata);
 				break;
 			} catch (SteemCommunicationException | SteemResponseException | SteemInvalidTransactionException e) {
@@ -1433,11 +1431,14 @@ public class Main extends AbstractApp {
 	}
 
 	private static final String MIME_HTML = "text/html";
+	@SuppressWarnings("unused")
 	private static final String LDQUO = "\u201c";
+	@SuppressWarnings("unused")
 	private static final String RDQUO = "\u201d";
 	private static final String LSQUO = "\u2018";
 	private static final String RSQUO = "\u2019";
 
+	@SuppressWarnings("unused")
 	private static String basicEscape(String text) {
 		return text.replace("&", "&amp;").replace("<", "&lt;").replaceAll(">", "&gt;");
 	}
@@ -1492,6 +1493,7 @@ public class Main extends AbstractApp {
 		return title;
 	}
 
+	@SuppressWarnings("unused")
 	private GregorianCalendar newGameDeadline(Date date) {
 		GregorianCalendar cal = new GregorianCalendar();
 		cal.setTime(date);
@@ -1515,6 +1517,7 @@ public class Main extends AbstractApp {
 		return cal;
 	}
 
+	@SuppressWarnings("unused")
 	private GregorianCalendar newTurnDeadline(Date date) {
 		GregorianCalendar cal = new GregorianCalendar();
 		cal.setTime(date);
@@ -1538,7 +1541,9 @@ public class Main extends AbstractApp {
 	}
 
 	private static final TimeZone EST5EDT = TimeZone.getTimeZone("EST5EDT");
+	@SuppressWarnings("unused")
 	private static final String DIV_PULL_RIGHT_START = "<div class='pull-right' style='float:right;padding:1rem;max-width:50%;'>";
+	@SuppressWarnings("unused")
 	private static final String DIV_PULL_LEFT_START = "<div class='pull-left' style='float:left;padding:1rem;max-width:50%;'>";
 
 	private void waitCheckBeforePosting(SteemJ steemJ) throws SteemCommunicationException, SteemResponseException {
