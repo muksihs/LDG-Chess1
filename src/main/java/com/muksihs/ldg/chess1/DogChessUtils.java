@@ -2,6 +2,7 @@ package com.muksihs.ldg.chess1;
 
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.text.NumberFormat;
 import java.util.ArrayList;
 
@@ -102,7 +103,21 @@ public class DogChessUtils {
 		return sideToMove;
 	}
 	
-	private static final BigDecimal MIN_RCS_TO_RUN = new BigDecimal("18873834001");
+	private static final BigDecimal _MIN_RCS_TO_RUN = new BigDecimal("18873834001");
+	private static BigDecimal minRcsToRun(AccountName botAccount) {
+		RcAccounts rcs;
+		try {
+			rcs = SteemRcApi.getRc(botAccount);
+		} catch (IOException e) {
+			return _MIN_RCS_TO_RUN;
+		}
+		for (RcAccount rc: rcs.getRcAccounts()) {
+			if (rc.getAccount().equals(botAccount.getName())) {
+				return rc.getMaxRc().divide(new BigDecimal("2")).setScale(0, RoundingMode.UP);
+			}
+		}
+		return _MIN_RCS_TO_RUN;
+	}
 	public static boolean doRcAbortCheck(AccountName botAccount) {
 		RcAccounts rcs;
 		try {
@@ -116,10 +131,11 @@ public class DogChessUtils {
 			return true;
 		}
 		for (RcAccount rc: rcAccounts) {
-			if (rc.getEstimatedMana().compareTo(MIN_RCS_TO_RUN)>0) {
+			BigDecimal minRcsToRun = minRcsToRun(botAccount);
+			if (rc.getEstimatedMana().compareTo(minRcsToRun)>0) {
 				return false;
 			}
-			System.out.println("--- Available RCs "+NumberFormat.getInstance().format(rc.getEstimatedMana())+" < "+NumberFormat.getInstance().format(MIN_RCS_TO_RUN));
+			System.out.println("--- Available RCs "+NumberFormat.getInstance().format(rc.getEstimatedMana())+" < "+NumberFormat.getInstance().format(minRcsToRun));
 		}
 		return true;
 	}
