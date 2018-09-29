@@ -102,7 +102,7 @@ public class DogChessUtils {
 		return sideToMove;
 	}
 	
-	private static final BigDecimal MIN_RCS_TO_RUN = new BigDecimal("3500000000");
+	private static final BigDecimal MIN_RCS_TO_RUN = new BigDecimal("18873834001");
 	public static boolean doRcAbortCheck(AccountName botAccount) {
 		RcAccounts rcs;
 		try {
