@@ -1277,7 +1277,7 @@ public class Main extends AbstractApp {
 		tags[1] = "chess";
 		tags[2] = "games";
 		tags[3] = "contest";
-		tags[4] = "signup-" + info.getGameId();
+		tags[4] = "new-game";
 		while (true) {
 			waitIfLowBandwidth();
 			try {
@@ -1337,7 +1337,7 @@ public class Main extends AbstractApp {
 				mostRecent = created;
 			}
 		}
-		Date oldestThreshold = DateUtils.addDays(new Date(), -5);
+		Date oldestThreshold = DateUtils.addDays(new Date(), -6);
 		return mostRecent.before(oldestThreshold);
 	}
 
