@@ -340,10 +340,10 @@ public class Main extends AbstractApp {
 			metadata.put("chessGameData", cgd);
 
 			List<String> tags = new ArrayList<>();
+			tags.add("playbypost");
 			tags.add("chess");
 			tags.add("steemchess");
 			tags.add("chess-match");
-			tags.add("gaming");
 			tags.add(gameId);
 
 			String turnHtml = generateTurnHtml(cgd);
@@ -920,10 +920,10 @@ public class Main extends AbstractApp {
 		metadata.put("chessGameData", cgd);
 
 		List<String> tags = new ArrayList<>();
+		tags.add("playbypost");
 		tags.add("chess");
 		tags.add("steemchess");
 		tags.add("chess-match");
-		tags.add("gaming");
 		tags.add(gameId);
 
 		String turnHtml = generateTurnHtml(cgd);
@@ -1268,9 +1268,9 @@ public class Main extends AbstractApp {
 
 		NewGameInviteInfo info = generateNewGameInviteHtml();
 		String[] tags = new String[5];
-		tags[0] = "chess";
-		tags[1] = "games";
-		tags[2] = "new-game";
+		tags[0] = "playbypost";
+		tags[1] = "chess";
+		tags[2] = "games";
 		tags[3] = "contest";
 		tags[4] = "signup-" + info.getGameId();
 		while (true) {
