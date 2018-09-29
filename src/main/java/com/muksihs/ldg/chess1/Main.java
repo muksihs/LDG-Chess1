@@ -258,6 +258,9 @@ public class Main extends AbstractApp {
 		retries: for (int retries = 0; retries < 10; retries++) {
 			try {
 				waitCheckBeforeReplying(steemJ);
+				if (DogChessUtils.doRcAbortCheck(botAccount)) {
+					return;
+				}
 				steemJ.createComment(player1.getChallenger(), parentPermlink, notice.toString(), tags, MIME_HTML,
 						getAppMetadata());
 				break retries;
@@ -348,6 +351,9 @@ public class Main extends AbstractApp {
 			retries: for (int retries = 0; retries < 10; retries++) {
 				try {
 					waitCheckBeforePosting(steemJ);
+					if (DogChessUtils.doRcAbortCheck(botAccount)) {
+						throw new RuntimeException("INSUFFICENT RCs");
+					}
 					CommentOperation info = steemJ.createPost(gameTitle.toString(), turnHtml,
 							tags.toArray(new String[0]), MIME_HTML, metadata);
 					gameLinks.put(match.getSemaphore(), info.getPermlink());
@@ -540,6 +546,9 @@ public class Main extends AbstractApp {
 					System.out.println(" Reject: " + reject.getChallenger().getName() + " "
 							+ getParsableBodyText(reject.getReason()));
 					waitCheckBeforeReplying(steemJ);
+					if (DogChessUtils.doRcAbortCheck(botAccount)) {
+						return;
+					}
 					steemJ.createComment(reject.getChallenger(), //
 							reject.getPermlink(), //
 							reject.getReason(), //
@@ -615,6 +624,9 @@ public class Main extends AbstractApp {
 		Iterator<Permlink> iActiveGames = activeGamesKeySet.iterator();
 		List<MoveResponse> responses = new ArrayList<>();
 		activeGames: while (iActiveGames.hasNext()) {
+			if (DogChessUtils.doRcAbortCheck(botAccount)) {
+				return;
+			}
 			Permlink permlink = iActiveGames.next();
 			ChessGameData activeGame = activeGames.get(permlink);
 			AccountName playerToMove = new AccountName(activeGame.getPlayerToMove().substring(1));
@@ -822,7 +834,7 @@ public class Main extends AbstractApp {
 
 	// TODO
 	private boolean processActiveGameMove(ChessGameData activeGame, Discussion playerReply, String theMove,
-			List<MoveResponse> responses) throws MoveException, MoveGeneratorException, MoveConversionException {
+			List<MoveResponse> responses) throws MoveException, MoveGeneratorException, MoveConversionException, JsonParseException, JsonMappingException, IOException {
 		Board board = new Board();
 		try {
 			board.getContext().setVariationType(VariationType.valueOf(activeGame.getVariationType()));
@@ -919,6 +931,9 @@ public class Main extends AbstractApp {
 		retries: for (int retries = 0; retries < 10; retries++) {
 			try {
 				waitCheckBeforePosting(steemJ);
+				if (DogChessUtils.doRcAbortCheck(botAccount)) {
+					throw new RuntimeException("INSUFFICENT RCs");
+				}
 				CommentOperation info = steemJ.createPost(gameTitle.toString(), turnHtml, tags.toArray(new String[0]),
 						MIME_HTML, metadata);
 				try {
@@ -1263,6 +1278,9 @@ public class Main extends AbstractApp {
 			try {
 				System.out.println("POSTING: " + info.getTitle());
 				waitCheckBeforePosting(steemJ);
+				if (DogChessUtils.doRcAbortCheck(botAccount)) {
+					throw new RuntimeException("INSUFFICENT RCs");
+				}
 				steemJ.createPost(info.getTitle(), info.getHtml(), tags, MIME_HTML, getAppMetadata());
 				return;
 			} catch (Exception e) {

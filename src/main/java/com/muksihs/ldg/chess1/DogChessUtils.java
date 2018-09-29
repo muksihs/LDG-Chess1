@@ -1,6 +1,17 @@
 package com.muksihs.ldg.chess1;
 
+import java.io.IOException;
+import java.math.BigDecimal;
+import java.text.NumberFormat;
+import java.util.ArrayList;
+
 import org.apache.commons.lang3.StringUtils;
+
+import com.muksihs.farhorizons.steemapi.RcAccount;
+import com.muksihs.farhorizons.steemapi.RcAccounts;
+import com.muksihs.farhorizons.steemapi.SteemRcApi;
+
+import eu.bittrade.libs.steemj.base.models.AccountName;
 
 public class DogChessUtils {
 	public static String whiteKing = "\u2654";
@@ -89,5 +100,27 @@ public class DogChessUtils {
 			return "";
 		}
 		return sideToMove;
+	}
+	
+	private static final BigDecimal MIN_RCS_TO_RUN = new BigDecimal("35000000000");
+	public static boolean doRcAbortCheck(AccountName botAccount) {
+		RcAccounts rcs;
+		try {
+			rcs = SteemRcApi.getRc(botAccount);
+		} catch (IOException e) {
+			System.err.println(e.getMessage());
+			return true;
+		}
+		ArrayList<RcAccount> rcAccounts = rcs.getRcAccounts();
+		if (rcAccounts.isEmpty()) {
+			return true;
+		}
+		for (RcAccount rc: rcAccounts) {
+			if (rc.getEstimatedMana().compareTo(MIN_RCS_TO_RUN)>0) {
+				return false;
+			}
+			System.out.println("--- Available RCs "+NumberFormat.getInstance().format(rc.getEstimatedMana())+" < "+NumberFormat.getInstance().format(MIN_RCS_TO_RUN));
+		}
+		return true;
 	}
 }
