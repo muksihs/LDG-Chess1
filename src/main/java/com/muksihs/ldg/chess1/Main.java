@@ -161,11 +161,22 @@ public class Main extends AbstractApp {
 		steemJ = initilizeSteemJ(accountInfo);
 		botAccount = accountInfo.getAccountName();
 
+		if (DogChessUtils.doRcAbortCheck(botAccount)) {
+			return;
+		}
 		doRunGameTurns();
+		if (DogChessUtils.doRcAbortCheck(botAccount)) {
+			return;
+		}
 		doStartNewMatches();
+		if (DogChessUtils.doRcAbortCheck(botAccount)) {
+			return;
+		}
 		doAnnounceGamePost();
+		if (DogChessUtils.doRcAbortCheck(botAccount)) {
+			return;
+		}
 		doUpvoteChecks();
-
 	}
 
 	private void doStartNewMatches()
@@ -936,12 +947,6 @@ public class Main extends AbstractApp {
 				}
 				CommentOperation info = steemJ.createPost(gameTitle.toString(), turnHtml, tags.toArray(new String[0]),
 						MIME_HTML, metadata);
-				try {
-					System.out.println(json.writeValueAsString(info));
-				} catch (JsonProcessingException e) {
-					e.printStackTrace();
-				}
-				// gameLinks.put(match.getSemaphore(), info.getPermlink());
 				break;
 			} catch (SteemCommunicationException | SteemResponseException | SteemInvalidTransactionException e) {
 				if (e.getMessage().contains("wait to transact")) {
