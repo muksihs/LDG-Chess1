@@ -1067,7 +1067,7 @@ public class Main extends AbstractApp {
 			if (!entry.getAuthor().equals(botAccount)) {
 				continue;
 			}
-			ExtendedAccount extendedBotAccount = getExtendedBotAccount(botAccount);
+			ExtendedAccount extendedBotAccount = getExtendedAccount(botAccount);
 			if (extendedBotAccount==null) {
 				continue forBlogEntries;
 			}
@@ -1136,7 +1136,7 @@ public class Main extends AbstractApp {
 		}
 	}
 
-	private ExtendedAccount getExtendedBotAccount(AccountName accountName) throws SteemCommunicationException, SteemResponseException {
+	private ExtendedAccount getExtendedAccount(AccountName accountName) throws SteemCommunicationException, SteemResponseException {
 		List<ExtendedAccount> accounts = steemJ.getAccounts(Arrays.asList(accountName));
 		for (ExtendedAccount account : accounts) {
 			if (account.getName().equals(botAccount)) {
