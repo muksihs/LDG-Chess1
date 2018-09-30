@@ -12,7 +12,9 @@ import com.muksihs.farhorizons.steemapi.RcAccount;
 import com.muksihs.farhorizons.steemapi.RcAccounts;
 import com.muksihs.farhorizons.steemapi.SteemRcApi;
 
+import eu.bittrade.libs.steemj.SteemJ;
 import eu.bittrade.libs.steemj.base.models.AccountName;
+import eu.bittrade.libs.steemj.base.models.ExtendedAccount;
 
 public class DogChessUtils {
 	public static String whiteKing = "\u2654";
@@ -139,4 +141,31 @@ public class DogChessUtils {
 		}
 		return true;
 	}
+	
+	/**
+	 * Get Estimated voting power as a percentage x 100.
+	 * @param lastVoteTimeSecs
+	 * @param lastVotingPower
+	 * @return
+	 */
+	public static BigDecimal getEstimateVote(ExtendedAccount account) {
+		return getEstimateVote(account.getLastVoteTime().getDateTimeAsInt(), account.getVotingPower());
+	}
+	/**
+	 * Get Estimated voting power as a percentage x 100.
+	 * @param lastVoteTimeSecs
+	 * @param lastVotingPower
+	 * @return
+	 */
+	public static BigDecimal getEstimateVote(int lastVoteTimeSecs, int lastVotingPower) {
+		BigDecimal maxVotingPower = BigDecimal.valueOf(10000);
+		BigDecimal now = new BigDecimal(System.currentTimeMillis()/1000l);
+		BigDecimal lastVoteTime = new BigDecimal(lastVoteTimeSecs);
+		BigDecimal elapsedTime = now.subtract(lastVoteTime);
+		BigDecimal percent = elapsedTime.divide(FIVE_DAYS_SECONDS, 3, RoundingMode.DOWN);
+		BigDecimal votingPowerGained = maxVotingPower.multiply(percent).setScale(0, RoundingMode.DOWN);
+		BigDecimal estimatedVotingPower = new BigDecimal(lastVotingPower).add(votingPowerGained);
+		return estimatedVotingPower.min(maxVotingPower).movePointLeft(2);
+	}
+	public static final BigDecimal FIVE_DAYS_SECONDS = new BigDecimal((long) 5 * 24 * 60 * 60);
 }

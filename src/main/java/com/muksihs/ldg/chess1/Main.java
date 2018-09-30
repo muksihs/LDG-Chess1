@@ -185,7 +185,7 @@ public class Main extends AbstractApp {
 
 	private void doParticipationPayouts() {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	private void doStartNewMatches()
@@ -853,7 +853,8 @@ public class Main extends AbstractApp {
 	}
 
 	private boolean processActiveGameMove(ChessGameData activeGame, Discussion playerReply, String theMove,
-			List<MoveResponse> responses) throws MoveException, MoveGeneratorException, MoveConversionException, JsonParseException, JsonMappingException, IOException {
+			List<MoveResponse> responses) throws MoveException, MoveGeneratorException, MoveConversionException,
+			JsonParseException, JsonMappingException, IOException {
 		Board board = new Board();
 		try {
 			board.getContext().setVariationType(VariationType.valueOf(activeGame.getVariationType()));
@@ -953,8 +954,7 @@ public class Main extends AbstractApp {
 				if (DogChessUtils.doRcAbortCheck(botAccount)) {
 					throw new RuntimeException("INSUFFICENT RCs");
 				}
-				steemJ.createPost(gameTitle.toString(), turnHtml, tags.toArray(new String[0]),
-						MIME_HTML, metadata);
+				steemJ.createPost(gameTitle.toString(), turnHtml, tags.toArray(new String[0]), MIME_HTML, metadata);
 				break;
 			} catch (SteemCommunicationException | SteemResponseException | SteemInvalidTransactionException e) {
 				if (e.getMessage().contains("wait to transact")) {
@@ -1067,8 +1067,12 @@ public class Main extends AbstractApp {
 			if (!entry.getAuthor().equals(botAccount)) {
 				continue;
 			}
+			ExtendedAccount extendedBotAccount = getExtendedBotAccount(botAccount);
+			if (extendedBotAccount==null) {
+				continue forBlogEntries;
+			}
 			// stop up voting if our voting power drops too low
-			BigDecimal votingPower = new BigDecimal(getExtendedAccount().getVotingPower()).movePointLeft(2);
+			BigDecimal votingPower = DogChessUtils.getEstimateVote(extendedBotAccount);
 			if (votingPower.compareTo(voteThreshold) < 0) {
 				System.out.println("Not up voting. Power " + votingPower + "% < " + voteThreshold + "%");
 				break forBlogEntries;
@@ -1130,6 +1134,16 @@ public class Main extends AbstractApp {
 				System.err.println(e.getClass().getName() + ":\n" + e.getMessage());
 			}
 		}
+	}
+
+	private ExtendedAccount getExtendedBotAccount(AccountName accountName) throws SteemCommunicationException, SteemResponseException {
+		List<ExtendedAccount> accounts = steemJ.getAccounts(Arrays.asList(accountName));
+		for (ExtendedAccount account : accounts) {
+			if (account.getName().equals(botAccount)) {
+				return account;
+			}
+		}
+		return null;
 	}
 
 	private void waitIfLowBandwidth() {
@@ -1343,7 +1357,7 @@ public class Main extends AbstractApp {
 			}
 			ChessGameData chessGameData = metadata.getChessGameData();
 			boolean gameSignupPost = false;
-			if (chessGameData!=null) {
+			if (chessGameData != null) {
 				gameSignupPost = chessGameData.isGameSignupPost();
 			}
 			if (!gameSignupPost && !tags.contains("new-game")) {

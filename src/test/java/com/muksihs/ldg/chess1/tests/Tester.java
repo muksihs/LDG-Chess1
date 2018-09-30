@@ -1,5 +1,12 @@
 package com.muksihs.ldg.chess1.tests;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
+
+import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.testng.annotations.Test;
 
 import com.github.bhlangonijr.chesslib.Board;
@@ -14,6 +21,15 @@ import com.github.bhlangonijr.chesslib.game.Round;
 import com.github.bhlangonijr.chesslib.game.VariationType;
 import com.github.bhlangonijr.chesslib.move.Move;
 import com.github.bhlangonijr.chesslib.move.MoveList;
+import com.muksihs.ldg.chess1.DogChessUtils;
+
+import eu.bittrade.libs.steemj.SteemJ;
+import eu.bittrade.libs.steemj.base.models.AccountName;
+import eu.bittrade.libs.steemj.base.models.ExtendedAccount;
+import eu.bittrade.libs.steemj.configuration.SteemJConfig;
+import eu.bittrade.libs.steemj.enums.PrivateKeyType;
+import eu.bittrade.libs.steemj.exceptions.SteemCommunicationException;
+import eu.bittrade.libs.steemj.exceptions.SteemResponseException;
 
 public class Tester {
 	@Test
@@ -59,14 +75,27 @@ public class Tester {
 	}
 	
 	@Test
-	public void board1() throws Exception {
-//		PgnHolder pgn = new PgnHolder("");
-//		Game game = new Game("12345", new Round(new Event()));
-//		game.getBlackPlayer();
-//		game.setBoard(new Board());
-//		game.loadMoveText();
-//		Board board = game.getBoard();
-//		System.out.println("PGN: "+game.toPgn(true, true));
-//		System.out.println("FEN: "+board.getFen(true));
+	public void votingPower() throws Exception {
+		SteemJ steemJ = getAnonAcccount();
+		List<AccountName> accountNames=new ArrayList<>();
+		accountNames.add(new AccountName("leatherdog-games"));
+		accountNames.add(new AccountName("muksihs"));
+		accountNames.add(new AccountName("pupmisfit"));
+		List<ExtendedAccount> accounts = steemJ.getAccounts(accountNames);
+		for (ExtendedAccount account: accounts) {
+			System.out.println("=== "+account.getName().getName());
+			System.out.println("Last vote time: "+account.getLastVoteTime().getDateTime());
+			System.out.println(account.getVotingPower()+" => "+DogChessUtils.getEstimateVote(account));
+		}
+	}
+	
+	public SteemJ getAnonAcccount() throws SteemCommunicationException, SteemResponseException {
+		SteemJConfig myConfig = SteemJConfig.getInstance();
+		myConfig.setEncodingCharset(StandardCharsets.UTF_8);
+		myConfig.setIdleTimeout(250);
+		myConfig.setResponseTimeout(1000);
+		myConfig.setBeneficiaryAccount(new AccountName("muksihs"));
+		myConfig.setSteemJWeight((short) 0);
+		return new SteemJ();
 	}
 }
