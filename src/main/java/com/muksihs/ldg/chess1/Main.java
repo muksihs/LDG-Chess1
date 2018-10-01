@@ -619,7 +619,7 @@ public class Main extends AbstractApp {
 
 	private Set<String> getListOfActiveMatches() throws SteemCommunicationException, SteemResponseException,
 			JsonParseException, JsonMappingException, IOException {
-		Map<Permlink, ChessGameData> activeGames = getActiveGames();
+		Map<Permlink, ChessGameData> activeGames = getActiveGames().getGamesByPermlink();
 		Set<String> semaphores = new HashSet<>();
 		for (ChessGameData activeGame : activeGames.values()) {
 			PlayerMatch match = new PlayerMatch();
@@ -638,17 +638,17 @@ public class Main extends AbstractApp {
 	private void doRunGameTurns() throws JsonParseException, JsonMappingException, IOException,
 			SteemCommunicationException, SteemResponseException, MoveException, MoveGeneratorException,
 			MoveConversionException, SteemInvalidTransactionException {
-		Map<Permlink, ChessGameData> activeGames = getActiveGames();
-		System.out.println("=== " + NF.format(activeGames.size()) + " active games.");
-		Set<Permlink> activeGamesKeySet = activeGames.keySet();
-		Iterator<Permlink> iActiveGames = activeGamesKeySet.iterator();
+		ActiveGames activeGames = getActiveGames();
+		Map<Permlink, ChessGameData> activeGamesMap = activeGames.getGamesByPermlink();
+		System.out.println("=== " + NF.format(activeGamesMap.size()) + " active games.");
+		Iterator<Permlink> iActiveGames = activeGames.getPermlinks().iterator();
 		List<MoveResponse> responses = new ArrayList<>();
 		activeGames: while (iActiveGames.hasNext()) {
 			if (DogChessUtils.doRcAbortCheck(botAccount)) {
 				return;
 			}
 			Permlink permlink = iActiveGames.next();
-			ChessGameData activeGame = activeGames.get(permlink);
+			ChessGameData activeGame = activeGamesMap.get(permlink);
 			AccountName playerToMove = new AccountName(activeGame.getPlayerToMove().substring(1));
 			AccountName playerWhite = new AccountName(activeGame.getPlayerWhite().substring(1));
 			AccountName playerBlack = new AccountName(activeGame.getPlayerBlack().substring(1));
@@ -971,12 +971,30 @@ public class Main extends AbstractApp {
 		return StringUtils.normalizeSpace(bodyText.replaceAll("<[^>]*?>", " ").replace(":", " ").toLowerCase().trim());
 	}
 
-	private Map<Permlink, ChessGameData> getActiveGames() throws SteemCommunicationException, SteemResponseException,
+	public static class ActiveGames {
+		private Map<Permlink, ChessGameData> gamesByPermlink;
+		private List<Permlink> permlinks;
+		public Map<Permlink, ChessGameData> getGamesByPermlink() {
+			return gamesByPermlink;
+		}
+		public void setGamesByPermlink(Map<Permlink, ChessGameData> gamesByPermlink) {
+			this.gamesByPermlink = gamesByPermlink;
+		}
+		public List<Permlink> getPermlinks() {
+			return permlinks;
+		}
+		public void setPermlink(List<Permlink> permlinks) {
+			this.permlinks = permlinks;
+		}
+	}
+	private ActiveGames getActiveGames() throws SteemCommunicationException, SteemResponseException,
 			IOException, JsonParseException, JsonMappingException {
 		Map<Permlink, ChessGameData> activeGames = new HashMap<>();
+		List<Permlink> permlinks = new ArrayList<>();
 
 		Set<String> already = new HashSet<>();
 		List<CommentBlogEntry> entries = getCachedBlogEntries();
+		Collections.sort(entries, (a,b)->a.getEntryId()-b.getEntryId());
 		gameScan: for (CommentBlogEntry entry : entries) {
 			// if not by game master, SKIP
 			if (entry.getComment() == null) {
@@ -1022,8 +1040,14 @@ public class Main extends AbstractApp {
 				continue gameScan;
 			}
 			activeGames.put(permlink, metadata.getChessGameData());
+			permlinks.add(permlink);
 		}
-		return activeGames;
+		ActiveGames ags = new ActiveGames();
+		ags.setGamesByPermlink(activeGames);
+		ags.setPermlink(permlinks);
+		//make sure to sort oldest first so that oldest gets played in case of RC drop
+		
+		return ags;
 	}
 
 	private List<CommentBlogEntry> cachedBlogEntries = null;
