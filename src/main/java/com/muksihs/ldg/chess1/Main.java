@@ -994,7 +994,8 @@ public class Main extends AbstractApp {
 
 		Set<String> already = new HashSet<>();
 		List<CommentBlogEntry> entries = getCachedBlogEntries();
-		Collections.sort(entries, (a,b)->a.getEntryId()-b.getEntryId());
+		//Ensure sort is newest to oldest so that "already" tracking works correctly.
+		Collections.sort(entries, (a,b)->b.getEntryId()-a.getEntryId());
 		gameScan: for (CommentBlogEntry entry : entries) {
 			// if not by game master, SKIP
 			if (entry.getComment() == null) {
@@ -1042,6 +1043,8 @@ public class Main extends AbstractApp {
 			activeGames.put(permlink, metadata.getChessGameData());
 			permlinks.add(permlink);
 		}
+		//reverse permlink sort order so that oldest active game gets first attention
+		Collections.reverse(permlinks);
 		ActiveGames ags = new ActiveGames();
 		ags.setGamesByPermlink(activeGames);
 		ags.setPermlink(permlinks);
