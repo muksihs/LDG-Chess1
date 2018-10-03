@@ -212,7 +212,7 @@ public class Main extends AbstractApp {
 				SignupReject reject = new SignupReject();
 				reject.setChallenger(challenger);
 				reject.setPermlink(permlink);
-				reject.setReason("<html><h4>Rejected</h4><h5>Match already in progress.</h5></html>");
+				reject.setReason("Rejected!\nMatch already in progress.");
 				reject.setTags(tags);
 				rejects.add(reject);
 				iPlayers.remove();
@@ -222,7 +222,7 @@ public class Main extends AbstractApp {
 				SignupReject reject = new SignupReject();
 				reject.setChallenger(challenger);
 				reject.setPermlink(permlink);
-				reject.setReason("<html><h4>Rejected</h4><h5>You are not allowed to play yourself.</h5></html>");
+				reject.setReason("Rejected!\nYou are not allowed to play yourself.");
 				reject.setTags(tags);
 				rejects.add(reject);
 				iPlayers.remove();
@@ -234,8 +234,8 @@ public class Main extends AbstractApp {
 					SignupReject reject = new SignupReject();
 					reject.setChallenger(challenger);
 					reject.setPermlink(permlink);
-					reject.setReason("<html><h4>Rejected</h4><h5>The account @" + challenged.getName()
-							+ " does not exist.</h5></html>");
+					reject.setReason("Rejected!\nThe account @" + challenged.getName()
+							+ " does not exist.");
 					reject.setTags(tags);
 					rejects.add(reject);
 					iPlayers.remove();
@@ -727,8 +727,8 @@ public class Main extends AbstractApp {
 									MoveResponse response = new MoveResponse();
 									response.setPermlink(playerReply.getPermlink());
 									response.setPlayer(playerReply.getAuthor());
-									response.setReason("<html><h4>REJECTED<h4><h5>@" + otherPlayer.getName()
-											+ " does not want to declare a draw.</h5></html>\n");
+									response.setReason("Rejected!\n>@" + otherPlayer.getName()
+											+ " does not want to declare a draw.");
 									responses.add(response);
 									iActiveGames.remove();
 									continue activeGames;
@@ -782,7 +782,7 @@ public class Main extends AbstractApp {
 						MoveResponse response = new MoveResponse();
 						response.setPermlink(playerReplyPermlink);
 						response.setPlayer(playerReply.getAuthor());
-						response.setReason("REJECTED\nNo squares specified.");
+						response.setReason("Rejected!\nNo squares specified.");
 						System.out.println(response.getReason());
 						continue playerReplies;
 					}
@@ -791,7 +791,7 @@ public class Main extends AbstractApp {
 						MoveResponse response = new MoveResponse();
 						response.setPermlink(playerReplyPermlink);
 						response.setPlayer(playerReply.getAuthor());
-						response.setReason("REJECTED\nNo destination square specified.");
+						response.setReason("Rejected!\nNo destination square specified.");
 						System.out.println(response.getReason());
 						continue playerReplies;
 					}
@@ -814,7 +814,7 @@ public class Main extends AbstractApp {
 						response.setPermlink(playerReplyPermlink);
 						response.setPlayer(playerReply.getAuthor());
 						response.setReason(
-								"REJECTED\nSource square not understood.\nMust be from a1 to h8. Do not specify extra information such as the piece.\n");
+								"Rejected!\nSource square not understood.\nMust be from a1 to h8. Do not specify extra information such as the piece.\n");
 						System.out.println(response.getReason());
 						continue playerReplies;
 					}
@@ -825,7 +825,7 @@ public class Main extends AbstractApp {
 						response.setPermlink(playerReplyPermlink);
 						response.setPlayer(playerReply.getAuthor());
 						response.setReason(
-								"REJECTED\nDestination square not understood.\nMust be from a1 to h8. Do not specify extra information such as the piece.\n");
+								"Rejected!\nDestination square not understood.\nMust be from a1 to h8. Do not specify extra information such as the piece.\n");
 						System.out.println(response.getReason());
 						continue playerReplies;
 					}
@@ -918,7 +918,7 @@ public class Main extends AbstractApp {
 			MoveResponse response = new MoveResponse();
 			response.setPermlink(playerReply.getPermlink());
 			response.setPlayer(playerReply.getAuthor());
-			response.setReason("REJECTED\nNot a valid move.");
+			response.setReason("Rejected!\nNot a valid move.");
 			System.out.println(response.getReason());
 			responses.add(response);
 			return false;
