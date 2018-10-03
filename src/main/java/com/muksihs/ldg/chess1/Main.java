@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.nio.charset.StandardCharsets;
+import java.text.BreakIterator;
 import java.text.DateFormat;
 import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
@@ -914,8 +915,37 @@ public class Main extends AbstractApp {
 		game.gotoLast();
 
 		StringBuilder gameTitle = new StringBuilder();
-		gameTitle.append("Chess " + whitePlayer + " vs " + blackPlayer + " - Round " + (1 + ml.size() / 2) + " - "
-				+ board.getSideToMove() + LSQUO + "s MOVE [" + gameId + "]");
+		specialTitle: {
+			if (game.getBoard().isMated()) {
+				gameTitle.append("CHECK MATE! ");
+				break specialTitle;
+			}
+			if (game.getBoard().isKingAttacked()) {
+				gameTitle.append("CHECK! ");
+				break specialTitle;
+			}
+			if (game.getBoard().isDraw()) {
+				gameTitle.append("DRAW! ");
+				break specialTitle;
+			}
+			if (game.getBoard().isStaleMate()) {
+				gameTitle.append("STALE MATE! ");
+				break specialTitle;
+			}
+		}
+		
+		gameTitle.append("Chess ");
+		gameTitle.append(whitePlayer);
+		gameTitle.append(" vs ");
+		gameTitle.append(blackPlayer);
+		gameTitle.append(" - Round ");
+		gameTitle.append((1 + ml.size() / 2));
+		gameTitle.append(" - ");
+		gameTitle.append(board.getSideToMove());
+		gameTitle.append(LSQUO);
+		gameTitle.append("s MOVE [");
+		gameTitle.append(gameId);
+		gameTitle.append("]");
 
 		System.out.println("=== " + gameTitle);
 
@@ -975,28 +1005,33 @@ public class Main extends AbstractApp {
 	public static class ActiveGames {
 		private Map<Permlink, ChessGameData> gamesByPermlink;
 		private List<Permlink> permlinks;
+
 		public Map<Permlink, ChessGameData> getGamesByPermlink() {
 			return gamesByPermlink;
 		}
+
 		public void setGamesByPermlink(Map<Permlink, ChessGameData> gamesByPermlink) {
 			this.gamesByPermlink = gamesByPermlink;
 		}
+
 		public List<Permlink> getPermlinks() {
 			return permlinks;
 		}
+
 		public void setPermlink(List<Permlink> permlinks) {
 			this.permlinks = permlinks;
 		}
 	}
-	private ActiveGames getActiveGames() throws SteemCommunicationException, SteemResponseException,
-			IOException, JsonParseException, JsonMappingException {
+
+	private ActiveGames getActiveGames() throws SteemCommunicationException, SteemResponseException, IOException,
+			JsonParseException, JsonMappingException {
 		Map<Permlink, ChessGameData> activeGames = new HashMap<>();
 		List<Permlink> permlinks = new ArrayList<>();
 
 		Set<String> already = new HashSet<>();
 		List<CommentBlogEntry> entries = getCachedBlogEntries();
-		//Ensure sort is newest to oldest so that "already" tracking works correctly.
-		Collections.sort(entries, (a,b)->b.getEntryId()-a.getEntryId());
+		// Ensure sort is newest to oldest so that "already" tracking works correctly.
+		Collections.sort(entries, (a, b) -> b.getEntryId() - a.getEntryId());
 		gameScan: for (CommentBlogEntry entry : entries) {
 			// if not by game master, SKIP
 			if (entry.getComment() == null) {
@@ -1044,13 +1079,13 @@ public class Main extends AbstractApp {
 			activeGames.put(permlink, metadata.getChessGameData());
 			permlinks.add(permlink);
 		}
-		//reverse permlink sort order so that oldest active game gets first attention
+		// reverse permlink sort order so that oldest active game gets first attention
 		Collections.reverse(permlinks);
 		ActiveGames ags = new ActiveGames();
 		ags.setGamesByPermlink(activeGames);
 		ags.setPermlink(permlinks);
-		//make sure to sort oldest first so that oldest gets played in case of RC drop
-		
+		// make sure to sort oldest first so that oldest gets played in case of RC drop
+
 		return ags;
 	}
 
@@ -1096,7 +1131,7 @@ public class Main extends AbstractApp {
 				continue;
 			}
 			ExtendedAccount extendedBotAccount = getExtendedAccount(botAccount);
-			if (extendedBotAccount==null) {
+			if (extendedBotAccount == null) {
 				continue forBlogEntries;
 			}
 			// stop up voting if our voting power drops too low
@@ -1164,7 +1199,8 @@ public class Main extends AbstractApp {
 		}
 	}
 
-	private ExtendedAccount getExtendedAccount(AccountName accountName) throws SteemCommunicationException, SteemResponseException {
+	private ExtendedAccount getExtendedAccount(AccountName accountName)
+			throws SteemCommunicationException, SteemResponseException {
 		List<ExtendedAccount> accounts = steemJ.getAccounts(Arrays.asList(accountName));
 		for (ExtendedAccount account : accounts) {
 			if (account.getName().equals(botAccount)) {
