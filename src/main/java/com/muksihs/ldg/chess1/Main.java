@@ -234,8 +234,7 @@ public class Main extends AbstractApp {
 					SignupReject reject = new SignupReject();
 					reject.setChallenger(challenger);
 					reject.setPermlink(permlink);
-					reject.setReason("Rejected!\nThe account @" + challenged.getName()
-							+ " does not exist.");
+					reject.setReason("Rejected!\nThe account @" + challenged.getName() + " does not exist.");
 					reject.setTags(tags);
 					rejects.add(reject);
 					iPlayers.remove();
@@ -425,7 +424,6 @@ public class Main extends AbstractApp {
 			sb.append("<div class='pull-right'>");
 			DogChessUtils.getJinchessHtml(boardOneMoveAgo, cgd.getSideToMove(), "", StringUtils.left(oneMoveAgo, 4));
 			sb.append("</div>");
-
 			sb.append("</div>");
 		}
 		sb.append("<hr/>\n");
@@ -930,7 +928,7 @@ public class Main extends AbstractApp {
 
 		String boardOneMoveAgo;
 		String boardTwoMovesAgo;
-		if (ml.size()>2) {
+		if (ml.size() > 2) {
 			game.gotoPrior();
 			boardOneMoveAgo = game.getFen();
 			game.gotoPrior();
