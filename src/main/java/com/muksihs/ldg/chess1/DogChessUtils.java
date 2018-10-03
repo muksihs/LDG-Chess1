@@ -12,7 +12,6 @@ import com.muksihs.farhorizons.steemapi.RcAccount;
 import com.muksihs.farhorizons.steemapi.RcAccounts;
 import com.muksihs.farhorizons.steemapi.SteemRcApi;
 
-import eu.bittrade.libs.steemj.SteemJ;
 import eu.bittrade.libs.steemj.base.models.AccountName;
 import eu.bittrade.libs.steemj.base.models.ExtendedAccount;
 
@@ -56,29 +55,31 @@ public class DogChessUtils {
 		return URL_FEN2IMAGE_ROTATED.replace("_FEN_", StringUtils.reverse(fen));
 	}
 
-	private static final String URL_JINCHESS_FEN2IMAGE = "http://www.jinchess.com/chessboard/?p=_FEN_&tm=_SIDE_&s=xl&bp=wooden-dark&cm=o&filename=chessboard.png";
-	private static final String URL_JINCHESS_FEN2IMAGE_ROTATED = "http://www.jinchess.com/chessboard/?p=_FEN_&tm=_SIDE_&s=xl&bp=wooden-dark&filename=chessboard-rotated.png";
+	private static final String URL_JINCHESS_FEN2IMAGE = "http://www.jinchess.com/chessboard/?p=_FEN_&tm=_SIDE_&s=xl&bp=wooden-dark&cm=o&c=_CIRCLES_&a=_ARROWS_&filename=chessboard.png";
+	private static final String URL_JINCHESS_FEN2IMAGE_ROTATED = "http://www.jinchess.com/chessboard/?p=_FEN_&tm=_SIDE_&s=xl&bp=wooden-dark&c=_CIRCLES_&a=_ARROWS_&filename=chessboard-rotated.png";
 
 	public static String getJinchessRotatedMarkdown(String fen) {
 		return "![CHESS BOARD ROTATED](" + getFen2ImageRotatedUrl(fen) + ")";
 	}
 
 	public static String getJinchessRotatedHtml(String fen, String sideToMove) {
-		return "<img alt='CHESS BOARD ROTATED' src='" + getJinchessRotatedUrl(fen, sideToMove) + "'/>";
+		return "<img alt='CHESS BOARD ROTATED' src='" + getJinchessRotatedUrl(fen, sideToMove, "", "") + "'/>";
 	}
 
 	public static String getJinchessHtml(String fen, String sideToMove) {
-		return "<img alt='CHESS BOARD' src='" + getJinchessUrl(fen, sideToMove) + "'/>";
+		return "<img alt='CHESS BOARD' src='" + getJinchessUrl(fen, sideToMove, "", "") + "'/>";
 	}
 
-	public static String getJinchessUrl(String fen, String sideToMove) {
+	public static String getJinchessUrl(String fen, String sideToMove, String circles, String arrows) {
 		sideToMove = fixupSideToMove(sideToMove);
 		fen = StringUtils.substringBefore(fen, " ");
 		String tmp = URL_JINCHESS_FEN2IMAGE.replace("_FEN_", fen);
+		tmp = tmp.replace("_CIRCLES_", circles);
+		tmp = tmp.replace("_ARROWS_", arrows);
 		return tmp.replace("_SIDE_", sideToMove);
 	}
 
-	public static String getJinchessRotatedUrl(String fen, String sideToMove) {
+	public static String getJinchessRotatedUrl(String fen, String sideToMove, String circles, String arrows) {
 		sideToMove = fixupSideToMove(sideToMove);
 		switch (sideToMove) {
 		case "b":
@@ -91,6 +92,8 @@ public class DogChessUtils {
 		}
 		fen = StringUtils.substringBefore(fen, " ");
 		String tmp = URL_JINCHESS_FEN2IMAGE_ROTATED.replace("_FEN_", StringUtils.reverse(fen));
+		tmp = tmp.replace("_CIRCLES_", circles);
+		tmp = tmp.replace("_ARROWS_", arrows);
 		return tmp.replace("_SIDE_", sideToMove);
 	}
 
