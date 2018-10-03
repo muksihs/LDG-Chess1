@@ -69,6 +69,10 @@ public class DogChessUtils {
 	public static String getJinchessHtml(String fen, String sideToMove) {
 		return "<img alt='CHESS BOARD' src='" + getJinchessUrl(fen, sideToMove, "", "") + "'/>";
 	}
+	
+	public static String getJinchessHtml(String fen, String sideToMove, String circles, String arrows) {
+		return "<img alt='CHESS BOARD' src='" + getJinchessUrl(fen, sideToMove, circles==null?"":circles, arrows==null?"":arrows) + "'/>";
+	}
 
 	public static String getJinchessUrl(String fen, String sideToMove, String circles, String arrows) {
 		sideToMove = fixupSideToMove(sideToMove);

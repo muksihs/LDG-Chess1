@@ -7,7 +7,6 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.nio.charset.StandardCharsets;
-import java.text.BreakIterator;
 import java.text.DateFormat;
 import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
@@ -367,7 +366,7 @@ public class Main extends AbstractApp {
 			tags.add("chess-match");
 			tags.add(gameId);
 
-			String turnHtml = generateTurnHtml(cgd);
+			String turnHtml = generateTurnHtml(cgd, "", "");
 
 			retries: for (int retries = 0; retries < 10; retries++) {
 				try {
@@ -390,7 +389,7 @@ public class Main extends AbstractApp {
 		return gameLinks;
 	}
 
-	private String generateTurnHtml(ChessGameData cgd) {
+	private String generateTurnHtml(ChessGameData cgd, String boardOneMoveAgo, String boardTwoMovesAgo) {
 		// TODO Switch to using template HTML
 		String WHITE_ORIENTATION = DogChessUtils.getJinchessHtml(cgd.getFen(), cgd.getSideToMove());
 		String BLACK_ORIENTATION = DogChessUtils.getJinchessRotatedHtml(cgd.getFen(), cgd.getSideToMove());
@@ -400,8 +399,8 @@ public class Main extends AbstractApp {
 		sb.append("<html>\n");
 
 		sb.append("<p><center><strong>");
-		sb.append(
-				cgd.getPlayerWhite() + " vs " + cgd.getPlayerBlack() + " Round " + (1 + cgd.getMoveList().size() / 2));
+		List<String> moveList = cgd.getMoveList();
+		sb.append(cgd.getPlayerWhite() + " vs " + cgd.getPlayerBlack() + " Round " + (1 + moveList.size() / 2));
 		sb.append("</strong></center></p>\n");
 
 		sb.append("<p><center><strong>");
@@ -414,6 +413,21 @@ public class Main extends AbstractApp {
 		sb.append("<p><center>\n");
 		sb.append(isWhiteToMove ? BLACK_ORIENTATION : WHITE_ORIENTATION);
 		sb.append("\n</center></p>\n");
+		if (moveList.size() > 2 && !StringUtils.isBlank(boardOneMoveAgo) && !StringUtils.isBlank(boardTwoMovesAgo)) {
+			sb.append("<hr/>\n");
+			sb.append("<h4>Most Recent Moves</h4>\n");
+			sb.append("<div>");
+			String twoMovesAgo = moveList.get(moveList.size() - 3);
+			sb.append("<div class='pull-left'>");
+			DogChessUtils.getJinchessHtml(boardTwoMovesAgo, cgd.getSideToMove(), "", StringUtils.left(twoMovesAgo, 4));
+			sb.append("</div>");
+			String oneMoveAgo = moveList.get(moveList.size() - 2);
+			sb.append("<div class='pull-right'>");
+			DogChessUtils.getJinchessHtml(boardOneMoveAgo, cgd.getSideToMove(), "", StringUtils.left(oneMoveAgo, 4));
+			sb.append("</div>");
+
+			sb.append("</div>");
+		}
 		sb.append("<hr/>\n");
 		sb.append(getInstructionsHtml());
 		sb.append("<hr/>\n");
@@ -914,6 +928,19 @@ public class Main extends AbstractApp {
 		game.setHalfMoves(ml);
 		game.gotoLast();
 
+		String boardOneMoveAgo;
+		String boardTwoMovesAgo;
+		if (ml.size()>2) {
+			game.gotoPrior();
+			boardOneMoveAgo = game.getFen();
+			game.gotoPrior();
+			boardTwoMovesAgo = game.getFen();
+		} else {
+			boardOneMoveAgo = "";
+			boardTwoMovesAgo = "";
+		}
+
+		game.gotoLast();
 		StringBuilder gameTitle = new StringBuilder();
 		specialTitle: {
 			if (game.getBoard().isMated()) {
@@ -933,7 +960,7 @@ public class Main extends AbstractApp {
 				break specialTitle;
 			}
 		}
-		
+
 		gameTitle.append("Chess ");
 		gameTitle.append(whitePlayer);
 		gameTitle.append(" vs ");
@@ -977,7 +1004,7 @@ public class Main extends AbstractApp {
 		tags.add("chess-match");
 		tags.add(gameId);
 
-		String turnHtml = generateTurnHtml(cgd);
+		String turnHtml = generateTurnHtml(cgd, boardOneMoveAgo, boardTwoMovesAgo);
 
 		retries: for (int retries = 0; retries < 10; retries++) {
 			try {
