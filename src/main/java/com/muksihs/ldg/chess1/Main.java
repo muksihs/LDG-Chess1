@@ -661,6 +661,17 @@ public class Main extends AbstractApp {
 			AccountName playerToMove = new AccountName(activeGame.getPlayerToMove().substring(1));
 			AccountName playerWhite = new AccountName(activeGame.getPlayerWhite().substring(1));
 			AccountName playerBlack = new AccountName(activeGame.getPlayerBlack().substring(1));
+			StringBuilder match = new StringBuilder();
+			if (playerToMove.equals(playerWhite)) {
+				match.append("*");
+			}
+			match.append(playerWhite.getName());
+			match.append(" vs ");
+			if (playerToMove.equals(playerBlack)) {
+				match.append("*");
+			}
+			match.append(playerBlack.getName());
+			System.out.println("--- "+match.toString());
 			AccountName otherPlayer;
 			if (playerToMove.equals(playerWhite)) {
 				otherPlayer = playerBlack;
