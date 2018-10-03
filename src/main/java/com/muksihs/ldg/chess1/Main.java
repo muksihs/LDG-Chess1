@@ -926,18 +926,6 @@ public class Main extends AbstractApp {
 		game.setHalfMoves(ml);
 		game.gotoLast();
 
-		String boardOneMoveAgo;
-		String boardTwoMovesAgo;
-		if (ml.size() > 2) {
-			game.gotoPrior();
-			boardOneMoveAgo = game.getBoard().getFen();
-			game.gotoPrior();
-			boardTwoMovesAgo = game.getBoard().getFen();
-		} else {
-			boardOneMoveAgo = "";
-			boardTwoMovesAgo = "";
-		}
-
 		game.gotoLast();
 		StringBuilder gameTitle = new StringBuilder();
 		specialTitle: {
@@ -1001,6 +989,18 @@ public class Main extends AbstractApp {
 		tags.add("steemchess");
 		tags.add("chess-match");
 		tags.add(gameId);
+		
+		String boardOneMoveAgo;
+		String boardTwoMovesAgo;
+		if (cgd.getMoveList().size() > 2) {
+			game.gotoPrior();
+			boardOneMoveAgo = game.getBoard().getFen();
+			game.gotoPrior();
+			boardTwoMovesAgo = game.getBoard().getFen();
+		} else {
+			boardOneMoveAgo = "";
+			boardTwoMovesAgo = "";
+		}
 
 		String turnHtml = generateTurnHtml(cgd, boardOneMoveAgo, boardTwoMovesAgo);
 
