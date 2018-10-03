@@ -69,9 +69,10 @@ public class DogChessUtils {
 	public static String getJinchessHtml(String fen, String sideToMove) {
 		return "<img alt='CHESS BOARD' src='" + getJinchessUrl(fen, sideToMove, "", "") + "'/>";
 	}
-	
+
 	public static String getJinchessHtml(String fen, String sideToMove, String circles, String arrows) {
-		return "<img alt='CHESS BOARD' src='" + getJinchessUrl(fen, sideToMove, circles==null?"":circles, arrows==null?"":arrows) + "'/>";
+		return "<img alt='CHESS BOARD' src='"
+				+ getJinchessUrl(fen, sideToMove, circles == null ? "" : circles, arrows == null ? "" : arrows) + "'/>";
 	}
 
 	public static String getJinchessUrl(String fen, String sideToMove, String circles, String arrows) {
@@ -111,8 +112,9 @@ public class DogChessUtils {
 		}
 		return sideToMove;
 	}
-	
+
 	private static final BigDecimal _MIN_RCS_TO_RUN = new BigDecimal("18873834001");
+
 	private static BigDecimal minRcsToRun(AccountName botAccount) {
 		RcAccounts rcs;
 		try {
@@ -120,13 +122,14 @@ public class DogChessUtils {
 		} catch (IOException e) {
 			return _MIN_RCS_TO_RUN;
 		}
-		for (RcAccount rc: rcs.getRcAccounts()) {
+		for (RcAccount rc : rcs.getRcAccounts()) {
 			if (rc.getAccount().equals(botAccount.getName())) {
 				return rc.getMaxRc().divide(new BigDecimal("2")).setScale(0, RoundingMode.UP);
 			}
 		}
 		return _MIN_RCS_TO_RUN;
 	}
+
 	public static boolean doRcAbortCheck(AccountName botAccount) {
 		RcAccounts rcs;
 		try {
@@ -139,18 +142,20 @@ public class DogChessUtils {
 		if (rcAccounts.isEmpty()) {
 			return true;
 		}
-		for (RcAccount rc: rcAccounts) {
+		for (RcAccount rc : rcAccounts) {
 			BigDecimal minRcsToRun = minRcsToRun(botAccount);
-			if (rc.getEstimatedMana().compareTo(minRcsToRun)>0) {
+			if (rc.getEstimatedMana().compareTo(minRcsToRun) > 0) {
 				return false;
 			}
-			System.out.println("--- Available RCs "+NumberFormat.getInstance().format(rc.getEstimatedMana())+" < "+NumberFormat.getInstance().format(minRcsToRun));
+			System.out.println("--- Available RCs " + NumberFormat.getInstance().format(rc.getEstimatedMana()) + " < "
+					+ NumberFormat.getInstance().format(minRcsToRun));
 		}
 		return true;
 	}
-	
+
 	/**
 	 * Get Estimated voting power as a percentage x 100.
+	 * 
 	 * @param lastVoteTimeSecs
 	 * @param lastVotingPower
 	 * @return
@@ -158,15 +163,17 @@ public class DogChessUtils {
 	public static BigDecimal getEstimateVote(ExtendedAccount account) {
 		return getEstimateVote(account.getLastVoteTime().getDateTimeAsInt(), account.getVotingPower());
 	}
+
 	/**
 	 * Get Estimated voting power as a percentage x 100.
+	 * 
 	 * @param lastVoteTimeSecs
 	 * @param lastVotingPower
 	 * @return
 	 */
 	public static BigDecimal getEstimateVote(int lastVoteTimeSecs, int lastVotingPower) {
 		BigDecimal maxVotingPower = BigDecimal.valueOf(10000);
-		BigDecimal now = new BigDecimal(System.currentTimeMillis()/1000l);
+		BigDecimal now = new BigDecimal(System.currentTimeMillis() / 1000l);
 		BigDecimal lastVoteTime = new BigDecimal(lastVoteTimeSecs);
 		BigDecimal elapsedTime = now.subtract(lastVoteTime);
 		BigDecimal percent = elapsedTime.divide(FIVE_DAYS_SECONDS, 3, RoundingMode.DOWN);
@@ -174,5 +181,6 @@ public class DogChessUtils {
 		BigDecimal estimatedVotingPower = new BigDecimal(lastVotingPower).add(votingPowerGained);
 		return estimatedVotingPower.min(maxVotingPower).movePointLeft(2);
 	}
+
 	public static final BigDecimal FIVE_DAYS_SECONDS = new BigDecimal((long) 5 * 24 * 60 * 60);
 }

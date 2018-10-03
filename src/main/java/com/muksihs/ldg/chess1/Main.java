@@ -388,8 +388,7 @@ public class Main extends AbstractApp {
 		return gameLinks;
 	}
 
-	private String generateTurnHtml(ChessGameData cgd, String boardOneMoveAgo, String boardTwoMovesAgo) {
-		// TODO Switch to using template HTML
+	private String generateTurnHtml(ChessGameData cgd, String thisBoard, String priorBoard) {
 		String WHITE_ORIENTATION = DogChessUtils.getJinchessHtml(cgd.getFen(), cgd.getSideToMove());
 		String BLACK_ORIENTATION = DogChessUtils.getJinchessRotatedHtml(cgd.getFen(), cgd.getSideToMove());
 		boolean isWhiteToMove = cgd.getSideToMove().equalsIgnoreCase("white");
@@ -412,17 +411,17 @@ public class Main extends AbstractApp {
 		sb.append("<p><center>\n");
 		sb.append(isWhiteToMove ? BLACK_ORIENTATION : WHITE_ORIENTATION);
 		sb.append("\n</center></p>\n");
-		if (moveList.size() > 2 && !StringUtils.isBlank(boardOneMoveAgo) && !StringUtils.isBlank(boardTwoMovesAgo)) {
+		if (moveList.size() > 2 && !StringUtils.isBlank(thisBoard) && !StringUtils.isBlank(priorBoard)) {
 			sb.append("<hr/>\n");
 			sb.append("<center><strong>Most Recent Moves</strong></center>\n");
 			sb.append("<div>");
-			String twoMovesAgo = moveList.get(moveList.size() - 3);
+			String priorMove = moveList.get(moveList.size() - 2);
 			sb.append("<div class='pull-left'>");
-			sb.append(DogChessUtils.getJinchessHtml(boardTwoMovesAgo, cgd.getSideToMove(), "", StringUtils.left(twoMovesAgo, 4)));
+			sb.append(DogChessUtils.getJinchessHtml(priorBoard, "", "", StringUtils.left(priorMove, 4)));
 			sb.append("</div>");
-			String oneMoveAgo = moveList.get(moveList.size() - 2);
+			String thisMove = moveList.get(moveList.size() - 1);
 			sb.append("<div class='pull-right'>");
-			sb.append(DogChessUtils.getJinchessHtml(boardOneMoveAgo, cgd.getSideToMove(), "", StringUtils.left(oneMoveAgo, 4)));
+			sb.append(DogChessUtils.getJinchessHtml(thisBoard, "", "", StringUtils.left(thisMove, 4)));
 			sb.append("</div>");
 			sb.append("</div>");
 		}
@@ -447,9 +446,6 @@ public class Main extends AbstractApp {
 		sb.append("<p>FEN: ");
 		sb.append(cgd.getFen());
 		sb.append("</p>\n");
-//		sb.append("<p>FAN: ");
-//		sb.append(cgd.getFan());
-//		sb.append("</p>\n");
 		sb.append("<p>SAN: ");
 		sb.append(cgd.getSan());
 		sb.append("</p>\n");
@@ -976,8 +972,6 @@ public class Main extends AbstractApp {
 		cgd.setPlayerToMove(board.getSideToMove().equals(Side.WHITE) ? whitePlayer.getName() : blackPlayer.getName());
 		cgd.setStalemate(board.isStaleMate());
 		cgd.setVariationType(board.getContext().getVariationType().name());
-
-//		cgd.setFan(game.getHalfMoves().toFan());
 		cgd.setSan(game.getHalfMoves().toSan());
 
 		Map<String, Object> metadata = getAppMetadata();
@@ -989,20 +983,27 @@ public class Main extends AbstractApp {
 		tags.add("steemchess");
 		tags.add("chess-match");
 		tags.add(gameId);
-		
+
+		String boardNow;
 		String boardOneMoveAgo;
-		String boardTwoMovesAgo;
 		if (cgd.getMoveList().size() > 2) {
+			game.gotoLast();
+			boardNow = game.getBoard().getFen();
+			if (StringUtils.isBlank(boardNow)) {
+				throw new IllegalStateException("FATAL. NO FEN FOR BOARD HISTORY! [now]");
+			}
 			game.gotoPrior();
 			boardOneMoveAgo = game.getBoard().getFen();
-			game.gotoPrior();
-			boardTwoMovesAgo = game.getBoard().getFen();
+			if (StringUtils.isBlank(boardOneMoveAgo)) {
+				throw new IllegalStateException("FATAL. NO FEN FOR BOARD HISTORY! [one move ago]");
+			}
+			game.gotoLast();
 		} else {
+			boardNow = "";
 			boardOneMoveAgo = "";
-			boardTwoMovesAgo = "";
 		}
 
-		String turnHtml = generateTurnHtml(cgd, boardOneMoveAgo, boardTwoMovesAgo);
+		String turnHtml = generateTurnHtml(cgd, boardNow, boardOneMoveAgo);
 
 		retries: for (int retries = 0; retries < 10; retries++) {
 			try {

@@ -9,7 +9,6 @@ import org.testng.annotations.Test;
 
 import com.github.bhlangonijr.chesslib.Board;
 import com.github.bhlangonijr.chesslib.Side;
-import com.github.bhlangonijr.chesslib.Square;
 import com.github.bhlangonijr.chesslib.game.Event;
 import com.github.bhlangonijr.chesslib.game.Game;
 import com.github.bhlangonijr.chesslib.game.GameFactory;
@@ -34,17 +33,17 @@ public class Tester {
 	public void pgn1() throws Exception {
 		Board board = new Board();
 		board.getContext().setVariationType(VariationType.NORMAL);
-		
+
 		Player p1 = GameFactory.newPlayer(PlayerType.HUMAN, "@muksihs");
 		Player p2 = GameFactory.newPlayer(PlayerType.HUMAN, "@pupmisfit");
-		
+
 		Event newGame = GameFactory.newEvent("Leather Dog Chess 1");
 		newGame.setEndDate("");
 		newGame.setSite("https://busy.org/@leatherdog-games");
 		newGame.setStartDate("2018-09-23");
-		
+
 		Round startingRound = GameFactory.newRound(newGame, 0);
-		
+
 		Game game = GameFactory.newGame("54321", startingRound);
 		game.setBoard(board);
 		game.setDate("2018-09-23");
@@ -54,13 +53,13 @@ public class Tester {
 		game.setWhitePlayer(p1);
 		game.setBlackPlayer(p2);
 		game.setMoveText(new StringBuilder());
-		
+
 		MoveList ml = new MoveList();
 		ml.add(new Move("E2E3", Side.WHITE));
 		ml.add(new Move("D7D5", Side.BLACK));
 		ml.add(new Move("D2D4", Side.WHITE));
 		ml.add(new Move("C8G4", Side.BLACK));
-		
+
 		List<String> moveList = new ArrayList<>();
 		moveList.add("E2E3");
 		moveList.add("D7D5");
@@ -69,13 +68,13 @@ public class Tester {
 
 		game.setHalfMoves(ml);
 		game.gotoLast();
-		
-		System.out.println("PGN:\n"+game.toPgn(true, true));
-		System.out.println("FEN: "+board.getFen(true));
-		System.out.println("Draw: "+board.isDraw());
-		System.out.println("Mated: "+board.isMated());
-		System.out.println("Stalemate: "+board.isStaleMate());
-		
+
+		System.out.println("PGN:\n" + game.toPgn(true, true));
+		System.out.println("FEN: " + board.getFen(true));
+		System.out.println("Draw: " + board.isDraw());
+		System.out.println("Mated: " + board.isMated());
+		System.out.println("Stalemate: " + board.isStaleMate());
+
 		if (moveList.size() > 2) {
 			game.gotoPrior();
 			String boardOneMoveAgo = game.getBoard().getFen();
@@ -84,30 +83,29 @@ public class Tester {
 			game.gotoLast();
 			System.out.println("-Most Recent Moves");
 			String twoMovesAgo = moveList.get(moveList.size() - 3);
-			System.out.println(DogChessUtils.getJinchessHtml(boardTwoMovesAgo, "", "", StringUtils.left(twoMovesAgo, 4)));
+			System.out
+					.println(DogChessUtils.getJinchessHtml(boardTwoMovesAgo, "", "", StringUtils.left(twoMovesAgo, 4)));
 			String oneMoveAgo = moveList.get(moveList.size() - 2);
 			System.out.println(DogChessUtils.getJinchessHtml(boardOneMoveAgo, "", "", StringUtils.left(oneMoveAgo, 4)));
 		}
-		
-		
-		
+
 	}
-	
+
 	@Test
 	public void votingPower() throws Exception {
 		SteemJ steemJ = getAnonAcccount();
-		List<AccountName> accountNames=new ArrayList<>();
+		List<AccountName> accountNames = new ArrayList<>();
 		accountNames.add(new AccountName("leatherdog-games"));
 		accountNames.add(new AccountName("muksihs"));
 		accountNames.add(new AccountName("pupmisfit"));
 		List<ExtendedAccount> accounts = steemJ.getAccounts(accountNames);
-		for (ExtendedAccount account: accounts) {
-			System.out.println("=== "+account.getName().getName());
-			System.out.println("Last vote time: "+account.getLastVoteTime().getDateTime());
-			System.out.println(account.getVotingPower()+" => "+DogChessUtils.getEstimateVote(account));
+		for (ExtendedAccount account : accounts) {
+			System.out.println("=== " + account.getName().getName());
+			System.out.println("Last vote time: " + account.getLastVoteTime().getDateTime());
+			System.out.println(account.getVotingPower() + " => " + DogChessUtils.getEstimateVote(account));
 		}
 	}
-	
+
 	public SteemJ getAnonAcccount() throws SteemCommunicationException, SteemResponseException {
 		SteemJConfig myConfig = SteemJConfig.getInstance();
 		myConfig.setEncodingCharset(StandardCharsets.UTF_8);
