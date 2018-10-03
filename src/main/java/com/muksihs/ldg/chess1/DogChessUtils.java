@@ -78,8 +78,8 @@ public class DogChessUtils {
 		sideToMove = fixupSideToMove(sideToMove);
 		fen = StringUtils.substringBefore(fen, " ");
 		String tmp = URL_JINCHESS_FEN2IMAGE.replace("_FEN_", fen);
-		tmp = tmp.replace("_CIRCLES_", circles);
-		tmp = tmp.replace("_ARROWS_", arrows);
+		tmp = tmp.replace("_CIRCLES_", circles.toLowerCase());
+		tmp = tmp.replace("_ARROWS_", arrows.toLowerCase());
 		return tmp.replace("_SIDE_", sideToMove);
 	}
 
@@ -96,8 +96,8 @@ public class DogChessUtils {
 		}
 		fen = StringUtils.substringBefore(fen, " ");
 		String tmp = URL_JINCHESS_FEN2IMAGE_ROTATED.replace("_FEN_", StringUtils.reverse(fen));
-		tmp = tmp.replace("_CIRCLES_", circles);
-		tmp = tmp.replace("_ARROWS_", arrows);
+		tmp = tmp.replace("_CIRCLES_", circles.toLowerCase());
+		tmp = tmp.replace("_ARROWS_", arrows.toLowerCase());
 		return tmp.replace("_SIDE_", sideToMove);
 	}
 

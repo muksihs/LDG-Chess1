@@ -414,15 +414,15 @@ public class Main extends AbstractApp {
 		sb.append("\n</center></p>\n");
 		if (moveList.size() > 2 && !StringUtils.isBlank(boardOneMoveAgo) && !StringUtils.isBlank(boardTwoMovesAgo)) {
 			sb.append("<hr/>\n");
-			sb.append("<h4>Most Recent Moves</h4>\n");
+			sb.append("<center><strong>Most Recent Moves</strong></center>\n");
 			sb.append("<div>");
 			String twoMovesAgo = moveList.get(moveList.size() - 3);
 			sb.append("<div class='pull-left'>");
-			DogChessUtils.getJinchessHtml(boardTwoMovesAgo, cgd.getSideToMove(), "", StringUtils.left(twoMovesAgo, 4));
+			sb.append(DogChessUtils.getJinchessHtml(boardTwoMovesAgo, cgd.getSideToMove(), "", StringUtils.left(twoMovesAgo, 4)));
 			sb.append("</div>");
 			String oneMoveAgo = moveList.get(moveList.size() - 2);
 			sb.append("<div class='pull-right'>");
-			DogChessUtils.getJinchessHtml(boardOneMoveAgo, cgd.getSideToMove(), "", StringUtils.left(oneMoveAgo, 4));
+			sb.append(DogChessUtils.getJinchessHtml(boardOneMoveAgo, cgd.getSideToMove(), "", StringUtils.left(oneMoveAgo, 4)));
 			sb.append("</div>");
 			sb.append("</div>");
 		}
@@ -930,9 +930,9 @@ public class Main extends AbstractApp {
 		String boardTwoMovesAgo;
 		if (ml.size() > 2) {
 			game.gotoPrior();
-			boardOneMoveAgo = game.getFen();
+			boardOneMoveAgo = game.getBoard().getFen();
 			game.gotoPrior();
-			boardTwoMovesAgo = game.getFen();
+			boardTwoMovesAgo = game.getBoard().getFen();
 		} else {
 			boardOneMoveAgo = "";
 			boardTwoMovesAgo = "";

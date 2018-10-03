@@ -1,15 +1,14 @@
 package com.muksihs.ldg.chess1.tests;
 
-import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.apache.commons.lang3.StringUtils;
 import org.testng.annotations.Test;
 
 import com.github.bhlangonijr.chesslib.Board;
+import com.github.bhlangonijr.chesslib.Side;
 import com.github.bhlangonijr.chesslib.Square;
 import com.github.bhlangonijr.chesslib.game.Event;
 import com.github.bhlangonijr.chesslib.game.Game;
@@ -27,7 +26,6 @@ import eu.bittrade.libs.steemj.SteemJ;
 import eu.bittrade.libs.steemj.base.models.AccountName;
 import eu.bittrade.libs.steemj.base.models.ExtendedAccount;
 import eu.bittrade.libs.steemj.configuration.SteemJConfig;
-import eu.bittrade.libs.steemj.enums.PrivateKeyType;
 import eu.bittrade.libs.steemj.exceptions.SteemCommunicationException;
 import eu.bittrade.libs.steemj.exceptions.SteemResponseException;
 
@@ -58,11 +56,17 @@ public class Tester {
 		game.setMoveText(new StringBuilder());
 		
 		MoveList ml = new MoveList();
-		ml.add(new Move(Square.E2, Square.E3));
-		ml.add(new Move(Square.D7, Square.D5));
-		ml.add(new Move(Square.D2, Square.D4));
-		ml.add(new Move(Square.C8, Square.G4));
+		ml.add(new Move("E2E3", Side.WHITE));
+		ml.add(new Move("D7D5", Side.BLACK));
+		ml.add(new Move("D2D4", Side.WHITE));
+		ml.add(new Move("C8G4", Side.BLACK));
 		
+		List<String> moveList = new ArrayList<>();
+		moveList.add("E2E3");
+		moveList.add("D7D5");
+		moveList.add("D2D4");
+		moveList.add("C8G4");
+
 		game.setHalfMoves(ml);
 		game.gotoLast();
 		
@@ -71,6 +75,21 @@ public class Tester {
 		System.out.println("Draw: "+board.isDraw());
 		System.out.println("Mated: "+board.isMated());
 		System.out.println("Stalemate: "+board.isStaleMate());
+		
+		if (moveList.size() > 2) {
+			game.gotoPrior();
+			String boardOneMoveAgo = game.getBoard().getFen();
+			game.gotoPrior();
+			String boardTwoMovesAgo = game.getBoard().getFen();
+			game.gotoLast();
+			System.out.println("-Most Recent Moves");
+			String twoMovesAgo = moveList.get(moveList.size() - 3);
+			System.out.println(DogChessUtils.getJinchessHtml(boardTwoMovesAgo, "", "", StringUtils.left(twoMovesAgo, 4)));
+			String oneMoveAgo = moveList.get(moveList.size() - 2);
+			System.out.println(DogChessUtils.getJinchessHtml(boardOneMoveAgo, "", "", StringUtils.left(oneMoveAgo, 4)));
+		}
+		
+		
 		
 	}
 	
