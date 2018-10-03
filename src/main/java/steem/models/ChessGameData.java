@@ -14,6 +14,7 @@ public class ChessGameData {
 	private List<String> moveList;
 	private String san;
 	private String fan;
+	private boolean kingAttacked;
 	public String getSan() {
 		return san;
 	}
@@ -128,5 +129,11 @@ public class ChessGameData {
 	}
 	public void setGameSignupPost(boolean gameSignupPost) {
 		this.gameSignupPost = gameSignupPost;
+	}
+	public boolean isKingAttacked() {
+		return kingAttacked;
+	}
+	public void setKingAttacked(boolean kingAttacked) {
+		this.kingAttacked = kingAttacked;
 	}
 }
