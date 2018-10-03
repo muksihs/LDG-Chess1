@@ -434,9 +434,9 @@ public class Main extends AbstractApp {
 		sb.append("<p>FEN: ");
 		sb.append(cgd.getFen());
 		sb.append("</p>\n");
-		sb.append("<p>FAN: ");
-		sb.append(cgd.getFan());
-		sb.append("</p>\n");
+//		sb.append("<p>FAN: ");
+//		sb.append(cgd.getFan());
+//		sb.append("</p>\n");
 		sb.append("<p>SAN: ");
 		sb.append(cgd.getSan());
 		sb.append("</p>\n");
@@ -921,6 +921,7 @@ public class Main extends AbstractApp {
 
 		ChessGameData cgd = activeGame;
 		cgd.setDraw(board.isDraw());
+		cgd.setKingAttacked(board.isKingAttacked());
 		cgd.setFen(board.getFen(true));
 		cgd.setGameId(gameId);
 		cgd.setMated(board.isMated());
@@ -933,7 +934,7 @@ public class Main extends AbstractApp {
 		cgd.setStalemate(board.isStaleMate());
 		cgd.setVariationType(board.getContext().getVariationType().name());
 
-		cgd.setFan(game.getHalfMoves().toFan());
+//		cgd.setFan(game.getHalfMoves().toFan());
 		cgd.setSan(game.getHalfMoves().toSan());
 
 		Map<String, Object> metadata = getAppMetadata();
