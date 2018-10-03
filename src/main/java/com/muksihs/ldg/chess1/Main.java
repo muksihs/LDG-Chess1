@@ -942,7 +942,7 @@ public class Main extends AbstractApp {
 		gameTitle.append((1 + ml.size() / 2));
 		gameTitle.append(" - ");
 		gameTitle.append(board.getSideToMove());
-		gameTitle.append(LSQUO);
+		gameTitle.append(RSQUO);
 		gameTitle.append("s MOVE [");
 		gameTitle.append(gameId);
 		gameTitle.append("]");
