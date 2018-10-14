@@ -59,7 +59,7 @@ public class RcAccount {
 		BigDecimal now = new BigDecimal(now_secs);
 		BigDecimal last = new BigDecimal(getRcManabar().getLastUpdateTime());
 		BigDecimal diff = now.subtract(last);
-		BigDecimal percent = diff.divide(FIVE_DAYS_SECONDS, 3, RoundingMode.DOWN);
+		BigDecimal percent = diff.divide(FIVE_DAYS_SECONDS, 9, RoundingMode.DOWN);
 		BigDecimal currentMana = getRcManabar().getCurrentMana();
 		BigDecimal estimateGain = maxRc.multiply(percent).setScale(0, RoundingMode.DOWN);
 		BigDecimal estimated = currentMana.add(estimateGain);

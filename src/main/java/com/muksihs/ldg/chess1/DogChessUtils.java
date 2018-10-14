@@ -5,6 +5,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.text.NumberFormat;
 import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.commons.lang3.StringUtils;
 
@@ -138,16 +139,17 @@ public class DogChessUtils {
 			System.err.println(e.getMessage());
 			return true;
 		}
-		ArrayList<RcAccount> rcAccounts = rcs.getRcAccounts();
+		List<RcAccount> rcAccounts = rcs.getRcAccounts();
 		if (rcAccounts.isEmpty()) {
 			return true;
 		}
+		BigDecimal minRcsToRun = minRcsToRun(botAccount);
 		for (RcAccount rc : rcAccounts) {
-			BigDecimal minRcsToRun = minRcsToRun(botAccount);
-			if (rc.getEstimatedMana().compareTo(minRcsToRun) > 0) {
+			BigDecimal estimatedMana = rc.getEstimatedMana();
+			if (estimatedMana.compareTo(minRcsToRun) > 0) {
 				return false;
 			}
-			System.out.println("--- Available RCs " + NumberFormat.getInstance().format(rc.getEstimatedMana()) + " < "
+			System.out.println("--- Available RCs " + NumberFormat.getInstance().format(estimatedMana) + " < "
 					+ NumberFormat.getInstance().format(minRcsToRun));
 		}
 		return true;

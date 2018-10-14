@@ -1,12 +1,17 @@
 package com.muksihs.ldg.chess1.tests;
 
+import java.io.IOException;
+import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
+import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.commons.lang3.StringUtils;
 import org.testng.annotations.Test;
 
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.github.bhlangonijr.chesslib.Board;
 import com.github.bhlangonijr.chesslib.Side;
 import com.github.bhlangonijr.chesslib.game.Event;
@@ -19,6 +24,9 @@ import com.github.bhlangonijr.chesslib.game.Round;
 import com.github.bhlangonijr.chesslib.game.VariationType;
 import com.github.bhlangonijr.chesslib.move.Move;
 import com.github.bhlangonijr.chesslib.move.MoveList;
+import com.muksihs.farhorizons.steemapi.RcAccount;
+import com.muksihs.farhorizons.steemapi.RcAccounts;
+import com.muksihs.farhorizons.steemapi.SteemRcApi;
 import com.muksihs.ldg.chess1.DogChessUtils;
 
 import eu.bittrade.libs.steemj.SteemJ;
@@ -89,6 +97,18 @@ public class Tester {
 			System.out.println(DogChessUtils.getJinchessHtml(boardOneMoveAgo, "", "", StringUtils.left(oneMoveAgo, 4)));
 		}
 
+	}
+	
+	@Test
+	public void reportAvailableRcs() throws JsonParseException, JsonMappingException, IOException {
+		AccountName account = new AccountName("leatherdog-games");
+		RcAccounts rcs;
+			rcs = SteemRcApi.getRc(account);
+		List<RcAccount> rcAccounts = rcs.getRcAccounts();
+		for (RcAccount rc : rcAccounts) {
+			BigDecimal estimatedMana = rc.getEstimatedMana();
+			System.out.println("--- Available RCs " + NumberFormat.getInstance().format(estimatedMana));
+		}
 	}
 
 	@Test
