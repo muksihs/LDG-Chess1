@@ -5,7 +5,6 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.nio.charset.StandardCharsets;
 import java.text.DateFormat;
 import java.text.NumberFormat;
@@ -67,7 +66,6 @@ import eu.bittrade.libs.steemj.apis.database.models.state.Discussion;
 import eu.bittrade.libs.steemj.apis.follow.model.BlogEntry;
 import eu.bittrade.libs.steemj.apis.follow.model.CommentBlogEntry;
 import eu.bittrade.libs.steemj.base.models.AccountName;
-import eu.bittrade.libs.steemj.base.models.DynamicGlobalProperty;
 import eu.bittrade.libs.steemj.base.models.ExtendedAccount;
 import eu.bittrade.libs.steemj.base.models.Permlink;
 import eu.bittrade.libs.steemj.base.models.TimePointSec;
@@ -1220,7 +1218,6 @@ public class Main extends AbstractApp {
 					continue forBlogEntries;
 				}
 			}
-			waitIfLowBandwidth();
 			// up vote this post. it has other votes already and we haven't up voted it yet.
 			try {
 				System.out.println("Upvoting: " + votingPower + "%");
@@ -1244,94 +1241,6 @@ public class Main extends AbstractApp {
 		for (ExtendedAccount account : accounts) {
 			if (account.getName().equals(botAccount)) {
 				return account;
-			}
-		}
-		return null;
-	}
-
-	private void waitIfLowBandwidth() {
-		NumberFormat nf = NumberFormat.getInstance();
-		nf.setMaximumFractionDigits(2);
-		nf.setRoundingMode(RoundingMode.DOWN);
-		String prev = "";
-		while (isLowBandwidth()) {
-			try {
-				String available = nf.format((100d - 100d * getBandwidthUsedPercent()));
-				if (!prev.equals(available)) {
-					prev = available;
-					System.err.println("Low bandwidth. Waiting. " + available + "%");
-				}
-				Thread.sleep(1000l * 30l);
-			} catch (SteemCommunicationException | SteemResponseException | InterruptedException e) {
-				System.err.println(e.getMessage());
-			}
-		}
-	}
-
-	private boolean isLowBandwidth() {
-		try {
-			double bandwidthUsed = (double) Math.ceil(10000d * getBandwidthUsedPercent()) / 100d;
-			if ((100d - bandwidthUsed) < bandwidthRequiredPercent) {
-				return true;
-			}
-			return false;
-		} catch (SteemCommunicationException | SteemResponseException e) {
-			return true;
-		}
-	}
-
-	private double bandwidthRequiredPercent = 65d;
-
-	private double getBandwidthUsedPercent() throws SteemCommunicationException, SteemResponseException {
-		double MILLION = 1000000d;
-		double STEEMIT_BANDWIDTH_AVERAGE_WINDOW_SECONDS = 60 * 60 * 24 * 7;
-		ExtendedAccount extendedAccount = getExtendedAccount();
-		DynamicGlobalProperty dynamicGlobalProperties = null;
-		for (int retries = 0; retries < 10; retries++) {
-			try {
-				dynamicGlobalProperties = steemJ.getDynamicGlobalProperties();
-			} catch (SteemResponseException e) {
-				if (retries == 9) {
-					throw e;
-				}
-				sleep(500);
-			}
-		}
-		double vestingShares = extendedAccount.getVestingShares().getAmount();
-		double receivedVestingShares = extendedAccount.getReceivedVestingShares().getAmount();
-		double totalVestingShares = dynamicGlobalProperties.getTotalVestingShares().getAmount();
-		double maxVirtualBandwidth = Double
-				.valueOf(dynamicGlobalProperties.getMaxVirtualBandwidth().replaceAll(" .*", ""));
-		double averageBandwidth = extendedAccount.getAverageBandwidth();
-		double deltaTimeSecs = Math.round(
-				new Date().getTime() - extendedAccount.getLastBandwidthUpdate().getDateTimeAsDate().getTime()) / 1000d;
-		double bandwidthAllocated = (maxVirtualBandwidth * (vestingShares + receivedVestingShares))
-				/ totalVestingShares;
-		bandwidthAllocated = Math.round(bandwidthAllocated / MILLION);
-		double newBandwidth = 0d;
-		if (deltaTimeSecs < STEEMIT_BANDWIDTH_AVERAGE_WINDOW_SECONDS) {
-			newBandwidth = (((STEEMIT_BANDWIDTH_AVERAGE_WINDOW_SECONDS - deltaTimeSecs) * averageBandwidth)
-					/ STEEMIT_BANDWIDTH_AVERAGE_WINDOW_SECONDS);
-			newBandwidth = Math.round(newBandwidth / MILLION);
-		}
-		double bandwidthUsedPercent = newBandwidth / bandwidthAllocated;
-		return bandwidthUsedPercent;
-	}
-
-	private ExtendedAccount getExtendedAccount() throws SteemCommunicationException, SteemResponseException {
-		for (int retries = 0; retries < 10; retries++) {
-			try {
-				List<ExtendedAccount> accounts = steemJ.getAccounts(Arrays.asList(botAccount));
-				if (accounts.isEmpty()) {
-					return null;
-				}
-				return accounts.iterator().next();
-			} catch (Exception e) {
-				try {
-					Thread.sleep(500);
-				} catch (InterruptedException e1) {
-				}
-
 			}
 		}
 		return null;
@@ -1404,7 +1313,6 @@ public class Main extends AbstractApp {
 		tags[3] = "contest";
 		tags[4] = "new-game";
 		while (true) {
-			waitIfLowBandwidth();
 			try {
 				System.out.println("POSTING: " + info.getTitle());
 				waitCheckBeforePosting(steemJ);
