@@ -33,7 +33,7 @@ dependencies {
 	//compile 'eu.bittrade.libs:steemj-core:0.4.3'
 	//compile 'com.github.muksihs:steem-java-api-wrapper:5c3a24a'
 	//compile project(':steemj-core')
-	compile 'com.github.muksihs.steem-java-api-wrapper:steemj-core:0.4.x-SNAPSHOT'
+	compile 'com.github.muksihs.steem-java-api-wrapper:steemj-core:99bb733f61'
 	//compile 'com.github.marvin-we.steem-java-api-wrapper:steemj-core:0.4.x-SNAPSHOT'
 	compile 'eu.bittrade.libs:steemj-image-upload:1.0.0'
 	compile 'org.apache.commons:commons-text:+'

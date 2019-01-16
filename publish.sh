@@ -9,7 +9,7 @@ clear
 gradle clean build fatjar -xtest
 
 date
-scp build/libs/LDG-Chess1.jar muksihs@muksihs.com:.
+rsync --verbose --progress -z build/libs/LDG-Chess1.jar muksihs@muksihs.com:.
 date
 
 exit 0
